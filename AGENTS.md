@@ -22,7 +22,7 @@ Project board: https://github.com/users/mrcarpinchoo/projects/2
 
 ## Current state
 
-The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest). The app has its shell: React Router routes, a layout with the environment badge and the API status, the typed API client in `src/api/client.ts`, and the menu screen with mock data (`src/mocks/menu.ts`). Login, register, cart, orders and the admin screens are still placeholders (`PlaceholderPage`). Deployment and CI are not set up yet.
+The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest). The app has its shell: React Router routes, a layout with the environment badge and the API status, the typed API client in `src/api/client.ts`, and the menu screen with mock data (`src/mocks/menu.ts`). Login and register forms exist and the session lives in `AuthProvider` (`src/auth/`), with `RequireAuth` and `RequireRole` guarding routes. Cart, orders and the admin screens are still placeholders (`PlaceholderPage`). The auth endpoints they call don't exist in the API yet, so the assumed contract is documented in `src/api/auth.ts`. Deployment and CI are not set up yet.
 
 ## Commands
 
@@ -101,6 +101,7 @@ The API is freshly scaffolded and evolves in parallel. Check `quickdish-api` for
 - Local dev URL: `http://localhost:8787` (`pnpm dev` in `quickdish-api`). Deployed URLs don't exist yet. There will be separate Dev and Prod Workers, each with its own D1 database.
 - **CORS is not configured.** The SPA and the API are on different origins, so the API will need `hono/cors` allowing the Pages origins and the local Vite origin. A Vite dev `server.proxy` avoids CORS locally but not in deployed environments.
 - Auth will use JWT (`hono/jwt`). How the token travels is not decided. A bearer token in the `Authorization` header is the simplest choice across domains. Cookies across `*.pages.dev` and `*.workers.dev` are cross-site and need `SameSite=None; Secure` plus credentialed CORS. Settle this with the user before building auth.
+- Assumed auth contract (`src/api/auth.ts`, until #8 exists): `POST /auth/login` and `POST /auth/register` return `{ token }`, and the JWT payload carries `role` (`CUSTOMER` or `ADMIN`) and `exp`. The frontend reads the role without checking the signature; the API checks it on every request.
 - Not decided yet: route names, response and error shapes, pagination, and how prices are represented (decimal or integer cents).
 
 Until the API contract exists:

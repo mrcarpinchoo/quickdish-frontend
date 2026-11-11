@@ -1,7 +1,10 @@
 import { Route, Routes } from "react-router";
+import { RequireAuth, RequireRole } from "./auth/RequireAuth";
 import { Layout } from "./components/Layout";
+import { LoginPage } from "./pages/LoginPage";
 import { MenuPage } from "./pages/MenuPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { RegisterPage } from "./pages/RegisterPage";
 
 function App() {
   return (
@@ -13,27 +16,43 @@ function App() {
         />
         <Route
           path="login"
-          element={<PlaceholderPage title="Iniciar sesión" />}
+          element={<LoginPage />}
         />
         <Route
           path="register"
-          element={<PlaceholderPage title="Registro" />}
+          element={<RegisterPage />}
         />
         <Route
           path="cart"
-          element={<PlaceholderPage title="Carrito" />}
+          element={
+            <RequireAuth>
+              <PlaceholderPage title="Carrito" />
+            </RequireAuth>
+          }
         />
         <Route
           path="orders"
-          element={<PlaceholderPage title="Mis pedidos" />}
+          element={
+            <RequireAuth>
+              <PlaceholderPage title="Mis pedidos" />
+            </RequireAuth>
+          }
         />
         <Route
           path="admin/orders"
-          element={<PlaceholderPage title="Pedidos" />}
+          element={
+            <RequireRole role="ADMIN">
+              <PlaceholderPage title="Pedidos" />
+            </RequireRole>
+          }
         />
         <Route
           path="admin/menu"
-          element={<PlaceholderPage title="Administrar menú" />}
+          element={
+            <RequireRole role="ADMIN">
+              <PlaceholderPage title="Administrar menú" />
+            </RequireRole>
+          }
         />
       </Route>
     </Routes>

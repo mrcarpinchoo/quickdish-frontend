@@ -2,12 +2,16 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import { AuthProvider } from "./auth/AuthProvider";
+import { makeToken } from "./test/tokens";
 
 function renderAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <App />
-    </MemoryRouter>
+    <AuthProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <App />
+      </MemoryRouter>
+    </AuthProvider>
   );
 }
 
@@ -29,6 +33,7 @@ describe("App", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    window.localStorage.clear();
   });
 
   it("renders the menu at / with the environment badge and API status", async () => {
@@ -41,11 +46,37 @@ describe("App", () => {
     expect(await screen.findByText("API en línea")).toBeInTheDocument();
   });
 
-  it("renders a placeholder for routes that are not built yet", () => {
+  it("sends anonymous visitors from /cart to the login page", () => {
     renderAt("/cart");
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Carrito" })
+      screen.getByRole("heading", { level: 1, name: "Iniciar sesión" })
+    ).toBeInTheDocument();
+  });
+
+  it("keeps customers out of the admin pages", () => {
+    window.localStorage.setItem(
+      "quickdish.token",
+      makeToken({ role: "CUSTOMER" })
+    );
+
+    renderAt("/admin/orders");
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Menú" })
+    ).toBeInTheDocument();
+  });
+
+  it("lets admins into the admin pages", () => {
+    window.localStorage.setItem(
+      "quickdish.token",
+      makeToken({ role: "ADMIN" })
+    );
+
+    renderAt("/admin/orders");
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Pedidos" })
     ).toBeInTheDocument();
   });
 });
