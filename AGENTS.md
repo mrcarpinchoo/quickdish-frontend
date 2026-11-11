@@ -28,7 +28,7 @@ The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest), but the
 
 ## Commands
 
-The package manager is **pnpm**, pinned through `packageManager` in `package.json` (`pnpm@12.15.0`, the same as the API), on Node.js 24 LTS.
+The package manager is **pnpm**, pinned through `packageManager` in `package.json` (`pnpm@12.15.0`, the same as the API), on Node.js 24 LTS (pinned in `.nvmrc`; run `nvm use` or `fnm use`).
 
 ```bash
 pnpm install
