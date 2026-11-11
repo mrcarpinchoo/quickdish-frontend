@@ -24,38 +24,44 @@ Project board: https://github.com/users/mrcarpinchoo/projects/2
 
 ## Current state
 
-The repo is still the unmodified `create-vite` `react-ts` template: React 19, Vite 8, TypeScript 6 and ESLint 10. `src/App.tsx` is the template's demo page and `README.md` is the template's README. None of the following exists yet: Tailwind, Prettier, Vitest, most of the target scripts, `VITE_API_URL`, the API client, routing, deployment or CI.
+The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest), but the app itself is still the `create-vite` `react-ts` template: `src/App.tsx` is the demo page, `src/index.css` and `src/App.css` hold the template's styles, and `README.md` is the template's README. None of the following exists yet: `VITE_API_URL`, the API client, routing, deployment or CI.
 
 ## Commands
 
-The package manager is **pnpm** (12.15.0 locally) on Node.js 24 LTS.
+The package manager is **pnpm**, pinned through `packageManager` in `package.json` (`pnpm@12.15.0`, the same as the API), on Node.js 24 LTS.
 
 ```bash
 pnpm install
-pnpm dev        # Vite dev server (http://localhost:5173)
-pnpm build      # tsc -b && vite build, outputs dist/
-pnpm preview    # serve the built dist/ locally
-pnpm lint       # eslint .
+pnpm dev            # Vite dev server (http://localhost:5173)
+pnpm build          # tsc -b && vite build, outputs dist/
+pnpm preview        # serve the built dist/ locally
+pnpm typecheck      # tsc -b
+pnpm lint           # ESLint with type-aware typescript-eslint rules; lint:fix to auto-fix
+pnpm format         # Prettier write; format:check to only check
+pnpm test           # Vitest, run once; test:watch for watch mode
+pnpm test:ci        # Vitest with V8 coverage (coverage/) and JUnit report (reports/junit.xml)
+
+pnpm test src/App.test.tsx          # run a single test file
+pnpm test -t "increments the counter" # run tests whose name matches
 ```
 
-These scripts are still missing: `typecheck`, `lint:fix`, `format`, `format:check`, `test` (run once), `test:watch` and `test:ci` (coverage plus a JUnit report at `reports/junit.xml`). Give them the same names and definitions as in `quickdish-api/package.json` so CI looks the same in both repos. Once Vitest is in place, run a single file with `pnpm test path/to/file.test.ts` or tests matching a name with `pnpm test -t "name"`.
+The script names and definitions match `quickdish-api/package.json`, so CI looks the same in both repos. Keep them in sync.
 
-Before considering a change done, run `pnpm typecheck`, `pnpm lint`, `pnpm format:check` and `pnpm test`, or whichever of them exist so far.
+Before considering a change done, run `pnpm typecheck`, `pnpm lint`, `pnpm format:check` and `pnpm test`.
 
-- Type-check with `tsc -b`, not `tsc`. The root `tsconfig.json` has `"files": []` and only references the two sub-projects, so a plain `tsc` checks nothing and exits 0. The `typecheck` script should be `tsc -b`.
+- Type-check with `tsc -b` (`pnpm typecheck`), never a plain `tsc`. The root `tsconfig.json` has `"files": []` and only references the two sub-projects, so a plain `tsc` checks nothing and exits 0.
 - If you add a `deploy` script, run it as `pnpm run deploy`. A bare `pnpm deploy` is a different built-in pnpm command.
-- The API pins `"packageManager": "pnpm@12.15.0"` in `package.json`. This repo doesn't yet; add the same field so CI uses the same pnpm.
 
 ## Tech stack
 
-| Concern      | Choice                     |
-| ------------ | -------------------------- |
-| Framework    | React + TypeScript         |
-| Build tool   | Vite                       |
-| Styling      | Tailwind CSS (not set up)  |
-| Testing      | Vitest (not set up)        |
-| Code quality | ESLint + Prettier          |
-| Hosting      | Cloudflare Pages (planned) |
+| Concern      | Choice                                |
+| ------------ | ------------------------------------- |
+| Framework    | React 19 + TypeScript 6               |
+| Build tool   | Vite 8                                |
+| Styling      | Tailwind CSS v4 (`@tailwindcss/vite`) |
+| Testing      | Vitest + jsdom + Testing Library      |
+| Code quality | ESLint (type-aware) + Prettier        |
+| Hosting      | Cloudflare Pages (planned)            |
 
 The proposal doesn't fix routing, data fetching or form libraries. Propose a choice and ask the user instead of picking silently.
 
@@ -74,11 +80,18 @@ Cloudflare docs change often, so read the current docs before setting up deploym
 ### Code and config
 
 - Entry chain: `index.html` → `src/main.tsx`, which mounts `<App>` inside `StrictMode` → `src/App.tsx`. Files in `public/` are served from the site root unchanged. Assets in `src/assets/` are imported, so Vite fingerprints them.
-- The TypeScript setup uses project references. `tsconfig.app.json` covers `src/` (DOM libs, `vite/client` types) and `tsconfig.node.json` covers only `vite.config.ts` (Node types). Add any new root-level TS config, such as `vitest.config.ts`, to `tsconfig.node.json`'s `include`, or it won't be type-checked.
+- The TypeScript setup uses project references. `tsconfig.app.json` covers `src/` (DOM libs, `vite/client` types), including test files. `tsconfig.node.json` covers the root config files `vite.config.ts` and `vitest.config.ts` (Node types). Add any new root-level TS config to `tsconfig.node.json`'s `include`, or it won't be type-checked.
 - `erasableSyntaxOnly` is on, so TS `enum`s, `namespace`s and constructor parameter properties are compile errors. Model `Role`, `OrderStatus` and similar types as string-literal unions or `as const` objects.
 - `verbatimModuleSyntax` is on, so type-only imports must use `import type`.
 - Env vars: only `VITE_`-prefixed variables reach client code (via `import.meta.env`), and Vite inlines them at build time. The API URL is therefore baked into each build, so Dev and Prod need separate builds with their own `VITE_API_URL`. Type the variables by declaring `ImportMetaEnv` in `src/vite-env.d.ts`. `.gitignore` already ignores `*.local`, which keeps `.env.local` out of git. Anything in a `VITE_` variable ships to the browser, so never put secrets there.
-- ESLint runs the template config: non-type-aware `tseslint.configs.recommended`, plus `react-hooks` and `react-refresh`. The `react-refresh` rule warns when a file exports both components and non-components, because that breaks Fast Refresh. The API's config is stricter (`recommendedTypeChecked` with `projectService`, plus `eslint-config-prettier`). Align this repo with it when you add Prettier.
+- Tailwind v4 has no `tailwind.config.js`. It's loaded by `@import "tailwindcss"` at the top of `src/index.css`, and theme customization goes in that file with `@theme`. `prettier-plugin-tailwindcss` sorts class names and reads the theme from `src/index.css` (the `tailwindStylesheet` option in `.prettierrc`), so update that option if the main stylesheet moves.
+- ESLint follows the API's layout: `recommendedTypeChecked` with `projectService`, and `eslint-config-prettier` last. The React Hooks and React Refresh rules apply only to `src/`. Root config files get Node globals, and plain `.js` files skip type-aware rules. The `react-refresh` rule warns when a file exports both components and non-components, because that breaks Fast Refresh.
+
+### Testing
+
+- Tests sit next to the code they cover as `src/**/*.test.{ts,tsx}` and run in jsdom. The API keeps its tests in `test/` instead, because it has no components to colocate with.
+- `vitest.config.ts` merges `vite.config.ts`, so tests run with the same plugins as the app. Put test-only options there, not in `vite.config.ts`.
+- Vitest globals are off: import `describe`, `it`, `expect` and `vi` from `"vitest"`. Because globals are off, Testing Library can't unmount components automatically, so `src/test/setup.ts` calls `cleanup()` after each test. It also registers the jest-dom matchers (`toBeInTheDocument()` and the like).
 
 ## API integration
 
@@ -137,8 +150,7 @@ Business rules the UI should reflect. The API enforces them, so the UI shouldn't
 ## Conventions
 
 - **All code is in English**: identifiers, routes, file names, enum values. The language of the UI copy (Spanish, English, or i18n) is not decided yet, so ask.
-- **Prettier**: copy `quickdish-api/.prettierrc`. It uses double quotes, semicolons, no trailing commas, `arrowParens: "avoid"`, `printWidth: 80`, `singleAttributePerLine: true` and `experimentalTernaries: true`, with 2-space indentation for JS/TS/JSON/YAML. The template code uses single quotes and trailing commas, so when you add Prettier, reformat the whole repo in a separate `style:` commit, as the API did.
-- When you add `test:ci`, add `coverage/` and `reports/` to `.gitignore`, `.prettierignore` and the ESLint ignores.
+- **Prettier**: `.prettierrc` is the API's config plus the Tailwind plugin. It uses double quotes, semicolons, no trailing commas, `arrowParens: "avoid"`, `printWidth: 80`, `singleAttributePerLine: true` and `experimentalTernaries: true`, with 2-space indentation for JS/TS/JSON/YAML and 4 spaces for everything else (CSS, HTML, Markdown). Keep the shared options in sync with `quickdish-api/.prettierrc`.
 
 ## Git conventions
 
