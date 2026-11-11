@@ -22,7 +22,7 @@ Project board: https://github.com/users/mrcarpinchoo/projects/2
 
 ## Current state
 
-The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest), but the app itself is still the `create-vite` `react-ts` template: `src/App.tsx` is the demo page, and `src/index.css` and `src/App.css` hold the template's styles. None of the following exists yet: `VITE_API_URL`, the API client, routing, deployment or CI.
+The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest). The app has its shell: React Router routes, a layout with the environment badge and the API status, the typed API client in `src/api/client.ts`, and the menu screen with mock data (`src/mocks/menu.ts`). Login, register, cart, orders and the admin screens are still placeholders (`PlaceholderPage`). Deployment and CI are not set up yet.
 
 ## Commands
 
@@ -39,8 +39,8 @@ pnpm format         # Prettier write; format:check to only check
 pnpm test           # Vitest, run once; test:watch for watch mode
 pnpm test:ci        # Vitest with V8 coverage (coverage/) and JUnit report (reports/junit.xml)
 
-pnpm test src/App.test.tsx          # run a single test file
-pnpm test -t "increments the counter" # run tests whose name matches
+pnpm test src/pages/MenuPage.test.tsx    # run a single test file
+pnpm test -t "filters"                   # run tests whose name matches
 ```
 
 The script names and definitions match `quickdish-api/package.json`, so CI looks the same in both repos. Keep them in sync.
@@ -57,11 +57,12 @@ Before considering a change done, run `pnpm typecheck`, `pnpm lint`, `pnpm forma
 | Framework    | React 19 + TypeScript 6               |
 | Build tool   | Vite 8                                |
 | Styling      | Tailwind CSS v4 (`@tailwindcss/vite`) |
+| Routing      | React Router (`react-router`)         |
 | Testing      | Vitest + jsdom + Testing Library      |
 | Code quality | ESLint (type-aware) + Prettier        |
 | Hosting      | Cloudflare Pages (planned)            |
 
-The proposal doesn't fix routing, data fetching or form libraries. Propose a choice and ask the user instead of picking silently.
+Routing is React Router, chosen on 2026-11-11 for the app shell. Data fetching and form libraries are still open: propose a choice and ask the user instead of picking silently.
 
 ## Architecture
 
@@ -77,12 +78,13 @@ Cloudflare docs change often, so read the current docs before setting up deploym
 
 ### Code and config
 
-- Entry chain: `index.html` → `src/main.tsx`, which mounts `<App>` inside `StrictMode` → `src/App.tsx`. Files in `public/` are served from the site root unchanged. Assets in `src/assets/` are imported, so Vite fingerprints them.
+- Entry chain: `index.html` → `src/main.tsx`, which mounts `<App>` inside `StrictMode` and `BrowserRouter` → `src/App.tsx`, which defines the routes. Files in `public/` are served from the site root unchanged. Assets in `src/assets/` are imported, so Vite fingerprints them.
 - The TypeScript setup uses project references. `tsconfig.app.json` covers `src/` (DOM libs, `vite/client` types), including test files. `tsconfig.node.json` covers the root config files `vite.config.ts` and `vitest.config.ts` (Node types). Add any new root-level TS config to `tsconfig.node.json`'s `include`, or it won't be type-checked.
 - `erasableSyntaxOnly` is on, so TS `enum`s, `namespace`s and constructor parameter properties are compile errors. Model `Role`, `OrderStatus` and similar types as string-literal unions or `as const` objects.
 - `verbatimModuleSyntax` is on, so type-only imports must use `import type`.
 - Env vars: only `VITE_`-prefixed variables reach client code (via `import.meta.env`), and Vite inlines them at build time. The API URL is therefore baked into each build, so Dev and Prod need separate builds with their own `VITE_API_URL`. Type the variables by declaring `ImportMetaEnv` in `src/vite-env.d.ts`. `.gitignore` already ignores `*.local`, which keeps `.env.local` out of git. Anything in a `VITE_` variable ships to the browser, so never put secrets there.
 - Tailwind v4 has no `tailwind.config.js`. It's loaded by `@import "tailwindcss"` at the top of `src/index.css`, and theme customization goes in that file with `@theme`. `prettier-plugin-tailwindcss` sorts class names and reads the theme from `src/index.css` (the `tailwindStylesheet` option in `.prettierrc`), so update that option if the main stylesheet moves.
+- `public/_redirects` (`/*  /index.html  200`) makes deep links such as `/cart` work on Pages. Keep it when the SPA is deployed.
 - ESLint follows the API's layout: `recommendedTypeChecked` with `projectService`, and `eslint-config-prettier` last. The React Hooks and React Refresh rules apply only to `src/`. Root config files get Node globals, and plain `.js` files skip type-aware rules. The `react-refresh` rule warns when a file exports both components and non-components, because that breaks Fast Refresh.
 
 ### Testing
@@ -147,7 +149,8 @@ Business rules the UI should reflect. The API enforces them, so the UI shouldn't
 
 ## Conventions
 
-- **All code is in English**: identifiers, routes, file names, enum values. The language of the UI copy (Spanish, English, or i18n) is not decided yet, so ask.
+- **All code is in English**: identifiers, routes, file names, enum values.
+- **UI copy is in Spanish**, decided on 2026-11-11 because the course and the team's docs are in Spanish. No i18n for now.
 - **Prettier**: `.prettierrc` is the API's config plus the Tailwind plugin. It uses double quotes, semicolons, no trailing commas, `arrowParens: "avoid"`, `printWidth: 80`, `singleAttributePerLine: true` and `experimentalTernaries: true`, with 2-space indentation for JS/TS/JSON/YAML and 4 spaces for everything else (CSS, HTML, Markdown). Keep the shared options in sync with `quickdish-api/.prettierrc`.
 
 ## Git conventions
