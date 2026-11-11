@@ -24,7 +24,7 @@ Project board: https://github.com/users/mrcarpinchoo/projects/2
 
 ## Current state
 
-The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest), but the app itself is still the `create-vite` `react-ts` template: `src/App.tsx` is the demo page, `src/index.css` and `src/App.css` hold the template's styles, and `README.md` is the template's README. None of the following exists yet: `VITE_API_URL`, the API client, routing, deployment or CI.
+The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest), but the app itself is still the `create-vite` `react-ts` template: `src/App.tsx` is the demo page, and `src/index.css` and `src/App.css` hold the template's styles. None of the following exists yet: `VITE_API_URL`, the API client, routing, deployment or CI.
 
 ## Commands
 
