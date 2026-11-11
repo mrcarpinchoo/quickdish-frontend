@@ -1,11 +1,16 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
 import { MenuPage } from "./MenuPage";
 
 describe("MenuPage", () => {
   it("shows every product by default", () => {
-    render(<MenuPage />);
+    render(
+      <MemoryRouter>
+        <MenuPage />
+      </MemoryRouter>
+    );
 
     expect(
       screen.getByRole("heading", { name: "Guacamole con totopos" })
@@ -17,7 +22,11 @@ describe("MenuPage", () => {
 
   it("filters the products by category", async () => {
     const user = userEvent.setup();
-    render(<MenuPage />);
+    render(
+      <MemoryRouter>
+        <MenuPage />
+      </MemoryRouter>
+    );
 
     await user.click(screen.getByRole("button", { name: "Bebidas" }));
 
@@ -34,7 +43,11 @@ describe("MenuPage", () => {
   });
 
   it("disables the add button for unavailable products", () => {
-    render(<MenuPage />);
+    render(
+      <MemoryRouter>
+        <MenuPage />
+      </MemoryRouter>
+    );
 
     expect(
       screen.getByRole("button", { name: "No disponible" })

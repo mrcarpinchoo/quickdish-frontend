@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { mockCategories, mockProducts } from "../mocks/menu";
 import { formatCents } from "../lib/money";
 import type { Product } from "../types/menu";
@@ -92,7 +93,14 @@ function ProductCard({ product }: { product: Product }) {
       }
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h2 className="text-lg font-semibold">{product.name}</h2>
+        <h2 className="text-lg font-semibold">
+          <Link
+            to={`/products/${product.id}`}
+            className="hover:underline"
+          >
+            {product.name}
+          </Link>
+        </h2>
         <p className="text-sm text-stone-600">{product.description}</p>
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">

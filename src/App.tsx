@@ -3,6 +3,7 @@ import { RequireAuth, RequireRole } from "./auth/RequireAuth";
 import { Layout } from "./components/Layout";
 import { LoginPage } from "./pages/LoginPage";
 import { MenuPage } from "./pages/MenuPage";
+import { ProductPage } from "./pages/ProductPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { RegisterPage } from "./pages/RegisterPage";
 
@@ -13,6 +14,10 @@ function App() {
         <Route
           index
           element={<MenuPage />}
+        />
+        <Route
+          path="products/:id"
+          element={<ProductPage />}
         />
         <Route
           path="login"
