@@ -1,0 +1,37 @@
+{
+  "arrowParens": "avoid",
+  "bracketSameLine": false,
+  "bracketSpacing": true,
+  "embeddedLanguageFormatting": "off",
+  "experimentalTernaries": true,
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleAttributePerLine": true,
+  "singleQuote": false,
+  "tailwindStylesheet": "./src/index.css",
+  "tabWidth": 4,
+  "trailingComma": "none",
+  "overrides":
+    [
+      {
+        "files":
+          [
+            "*.js",
+            "*.jsx",
+            "*.ts",
+            "*.tsx",
+            "*.json",
+            ".prettierrc",
+            "*.yml",
+            "*.yaml"
+          ],
+        "options": { "tabWidth": 2 }
+      }
+    ]
+}
