@@ -10,13 +10,11 @@ The course grades the DevOps side (CI/CD, environments, IaC, containers, testing
 
 This repo is **only the frontend SPA**. The project is split across three repos, all under the GitHub user `mrcarpinchoo`:
 
-| Repo              | Contents                                 | Hosting                 |
-| ----------------- | ---------------------------------------- | ----------------------- |
-| `quickdish-api`   | Hono REST API                            | Cloudflare Workers + D1 |
-| `quickdish-web`   | React + TypeScript + Vite + Tailwind SPA | Cloudflare Pages        |
-| `quickdish-infra` | Terraform for the Cloudflare resources   | —                       |
-
-The API docs call this repo `quickdish-web`, but the local folder and `package.json` name are `quickdish-frontend`. Confirm the final name with the user before creating the GitHub remote or naming the Cloudflare project.
+| Repo                 | Contents                                 | Hosting                 |
+| -------------------- | ---------------------------------------- | ----------------------- |
+| `quickdish-api`      | Hono REST API                            | Cloudflare Workers + D1 |
+| `quickdish-frontend` | React + TypeScript + Vite + Tailwind SPA | Cloudflare Pages        |
+| `quickdish-infra`    | Terraform for the Cloudflare resources   | —                       |
 
 The repos are checked out side by side. The sibling `quickdish-api/` folder has its own `AGENTS.md`, which is the source of truth for the backend. The parent folder also holds `architecture-diagram.mmd`, `ci-cd-diagram.mmd` and the original `Project proposal.pdf` (in Spanish).
 

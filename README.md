@@ -1,4 +1,4 @@
-# QuickDish Web
+# QuickDish Front-end
 
 Frontend for **QuickDish**, a restaurant ordering platform. Customers browse the menu by category, add dishes to a cart and place orders without a waiter. Admins manage the menu and move each order through its lifecycle: pending → in preparation → ready → delivered.
 
@@ -6,11 +6,11 @@ The frontend is a single-page app built with [React](https://react.dev/) and [Vi
 
 ## Related repositories
 
-| Repository        | Description                                 |
-| ----------------- | ------------------------------------------- |
-| `quickdish-api`   | REST API on Cloudflare Workers              |
-| `quickdish-web`   | This repository: React frontend on Pages    |
-| `quickdish-infra` | Terraform code for the Cloudflare resources |
+| Repository           | Description                                 |
+| -------------------- | ------------------------------------------- |
+| `quickdish-api`      | REST API on Cloudflare Workers              |
+| `quickdish-frontend` | This repository: React frontend on Pages    |
+| `quickdish-infra`    | Terraform code for the Cloudflare resources |
 
 ## Tech stack
 
