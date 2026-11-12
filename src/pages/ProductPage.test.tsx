@@ -23,14 +23,12 @@ describe("ProductPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Enchiladas verdes" })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "No disponible" })
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Unavailable" })).toBeDisabled();
   });
 
   it("shows a message for an unknown product", () => {
     renderProduct("/products/no-existe");
 
-    expect(screen.getByText("Este platillo no existe.")).toBeInTheDocument();
+    expect(screen.getByText("This dish does not exist.")).toBeInTheDocument();
   });
 });

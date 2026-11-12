@@ -155,7 +155,7 @@ Business rules the UI should reflect. The API enforces them, so the UI shouldn't
 ## Conventions
 
 - **All code is in English**: identifiers, routes, file names, enum values.
-- **UI copy is in Spanish**, decided on 2026-11-11 because the course and the team's docs are in Spanish. No i18n for now.
+- **UI copy is in English**, changed on 2026-11-12 at the user's request (it was Spanish since 2026-11-11). No i18n for now. The API already returns English error messages, so the UI shows them as they come.
 - **Prettier**: `.prettierrc` is the API's config plus the Tailwind plugin. It uses double quotes, semicolons, no trailing commas, `arrowParens: "avoid"`, `printWidth: 80`, `singleAttributePerLine: true` and `experimentalTernaries: true`, with 2-space indentation for JS/TS/JSON/YAML and 4 spaces for everything else (CSS, HTML, Markdown). Keep the shared options in sync with `quickdish-api/.prettierrc`.
 
 ## Git conventions

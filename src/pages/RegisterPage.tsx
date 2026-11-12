@@ -17,11 +17,11 @@ export function RegisterPage() {
 
   async function submit() {
     if (name.trim() === "") {
-      setError("Escribe tu nombre.");
+      setError("Enter your name.");
       return;
     }
     if (!isValidEmail(email)) {
-      setError("Escribe un correo válido.");
+      setError("Enter a valid email.");
       return;
     }
     const passwordProblem = passwordError(password);
@@ -53,7 +53,7 @@ export function RegisterPage() {
 
   return (
     <section className="mx-auto max-w-sm space-y-6">
-      <h1 className="text-2xl font-semibold">Crear cuenta</h1>
+      <h1 className="text-2xl font-semibold">Create account</h1>
 
       <form
         className="space-y-4"
@@ -61,7 +61,7 @@ export function RegisterPage() {
         noValidate
       >
         <label className="block text-sm font-medium">
-          Nombre
+          Name
           <input
             autoComplete="name"
             value={name}
@@ -71,7 +71,7 @@ export function RegisterPage() {
         </label>
 
         <label className="block text-sm font-medium">
-          Correo
+          Email
           <input
             type="email"
             autoComplete="email"
@@ -82,7 +82,7 @@ export function RegisterPage() {
         </label>
 
         <label className="block text-sm font-medium">
-          Contraseña (mínimo 8 caracteres)
+          Password (at least 8 characters)
           <input
             type="password"
             autoComplete="new-password"
@@ -106,12 +106,12 @@ export function RegisterPage() {
           disabled={submitting}
           className="w-full rounded-md bg-orange-600 px-4 py-2 font-medium text-white hover:bg-orange-700 disabled:bg-stone-300"
         >
-          Crear cuenta
+          Create account
         </button>
       </form>
 
       <p className="text-sm text-stone-600">
-        ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
+        Already have an account? <Link to="/login">Sign in</Link>
       </p>
     </section>
   );

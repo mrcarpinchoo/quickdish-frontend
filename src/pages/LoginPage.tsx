@@ -18,11 +18,11 @@ export function LoginPage() {
 
   async function submit() {
     if (!isValidEmail(email)) {
-      setError("Escribe un correo válido.");
+      setError("Enter a valid email.");
       return;
     }
     if (password === "") {
-      setError("Escribe tu contraseña.");
+      setError("Enter your password.");
       return;
     }
 
@@ -45,7 +45,7 @@ export function LoginPage() {
 
   return (
     <section className="mx-auto max-w-sm space-y-6">
-      <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
+      <h1 className="text-2xl font-semibold">Sign in</h1>
 
       <form
         className="space-y-4"
@@ -53,7 +53,7 @@ export function LoginPage() {
         noValidate
       >
         <label className="block text-sm font-medium">
-          Correo
+          Email
           <input
             type="email"
             autoComplete="email"
@@ -64,7 +64,7 @@ export function LoginPage() {
         </label>
 
         <label className="block text-sm font-medium">
-          Contraseña
+          Password
           <input
             type="password"
             autoComplete="current-password"
@@ -88,12 +88,12 @@ export function LoginPage() {
           disabled={submitting}
           className="w-full rounded-md bg-orange-600 px-4 py-2 font-medium text-white hover:bg-orange-700 disabled:bg-stone-300"
         >
-          Iniciar sesión
+          Sign in
         </button>
       </form>
 
       <p className="text-sm text-stone-600">
-        ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
+        No account yet? <Link to="/register">Sign up</Link>
       </p>
     </section>
   );

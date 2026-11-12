@@ -31,7 +31,7 @@ function App() {
           path="cart"
           element={
             <RequireAuth>
-              <PlaceholderPage title="Carrito" />
+              <PlaceholderPage title="Cart" />
             </RequireAuth>
           }
         />
@@ -39,7 +39,7 @@ function App() {
           path="orders"
           element={
             <RequireAuth>
-              <PlaceholderPage title="Mis pedidos" />
+              <PlaceholderPage title="My orders" />
             </RequireAuth>
           }
         />
@@ -47,7 +47,7 @@ function App() {
           path="admin/orders"
           element={
             <RequireRole role="ADMIN">
-              <PlaceholderPage title="Pedidos" />
+              <PlaceholderPage title="Orders" />
             </RequireRole>
           }
         />
@@ -55,7 +55,7 @@ function App() {
           path="admin/menu"
           element={
             <RequireRole role="ADMIN">
-              <PlaceholderPage title="Administrar menú" />
+              <PlaceholderPage title="Manage menu" />
             </RequireRole>
           }
         />

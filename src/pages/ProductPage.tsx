@@ -9,13 +9,13 @@ export function ProductPage() {
   if (!product) {
     return (
       <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Platillo no encontrado</h1>
-        <p className="text-stone-600">Este platillo no existe.</p>
+        <h1 className="text-2xl font-semibold">Dish not found</h1>
+        <p className="text-stone-600">This dish does not exist.</p>
         <Link
           to="/"
           className="text-orange-700 underline"
         >
-          Volver al menú
+          Back to menu
         </Link>
       </section>
     );
@@ -27,7 +27,7 @@ export function ProductPage() {
         to="/"
         className="text-sm text-orange-700 underline"
       >
-        Volver al menú
+        Back to menu
       </Link>
 
       {product.imageUrl ?
@@ -56,7 +56,7 @@ export function ProductPage() {
           disabled={!product.available}
           className="rounded-md bg-orange-600 px-4 py-2 font-medium text-white hover:bg-orange-700 disabled:bg-stone-300 disabled:text-stone-600"
         >
-          {product.available ? "Agregar al carrito" : "No disponible"}
+          {product.available ? "Add to cart" : "Unavailable"}
         </button>
       </div>
     </article>

@@ -83,7 +83,7 @@ export async function apiRequest<T>(
     const error =
       isErrorBody(data) ?
         data.error
-      : { code: "unknown_error", message: "La API respondió con un error." };
+      : { code: "unknown_error", message: "The API returned an error." };
     throw new ApiError(response.status, error.code, error.message);
   }
 

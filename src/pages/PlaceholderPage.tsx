@@ -8,7 +8,7 @@ export function PlaceholderPage({ title }: PlaceholderPageProps) {
     <section className="rounded-lg border border-dashed border-stone-300 bg-white p-8 text-center">
       <h1 className="text-2xl font-semibold">{title}</h1>
       <p className="mt-2 text-stone-600">
-        Esta pantalla llega en una historia posterior.
+        This screen arrives in a later story.
       </p>
     </section>
   );

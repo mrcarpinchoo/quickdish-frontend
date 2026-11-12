@@ -61,7 +61,7 @@ describe("apiRequest", () => {
         {
           error: {
             code: "product_unavailable",
-            message: "Producto no disponible"
+            message: "Product not available"
           }
         },
         409
@@ -77,7 +77,7 @@ describe("apiRequest", () => {
     expect(error).toMatchObject({
       status: 409,
       code: "product_unavailable",
-      message: "Producto no disponible"
+      message: "Product not available"
     });
   });
 
@@ -93,7 +93,7 @@ describe("apiRequest", () => {
   it("runs the unauthorized handler on 401", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(
-        { error: { code: "unauthorized", message: "Sesión expirada" } },
+        { error: { code: "unauthorized", message: "Session expired" } },
         401
       )
     );
