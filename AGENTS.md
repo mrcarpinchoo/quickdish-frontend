@@ -22,7 +22,7 @@ Project board: https://github.com/users/mrcarpinchoo/projects/2
 
 ## Current state
 
-The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest). The app has its shell: React Router routes, a layout with the environment badge and the API status, the typed API client in `src/api/client.ts`, and the menu screen with mock data (`src/mocks/menu.ts`). Login and register forms exist and the session lives in `AuthProvider` (`src/auth/`), with `RequireAuth` and `RequireRole` guarding routes. Cart, orders and the admin screens are still placeholders (`PlaceholderPage`). The auth endpoints they call don't exist in the API yet, so the assumed contract is documented in `src/api/auth.ts`. Deployment and CI are not set up yet.
+The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest). The app has its shell: React Router routes, a layout with the environment badge and the API status, the typed API client in `src/api/client.ts`, and the menu screen with mock data (`src/mocks/menu.ts`). Login and register forms exist and the session lives in `AuthProvider` (`src/auth/`), with `RequireAuth` and `RequireRole` guarding routes. Cart, orders and the admin screens are still placeholders (`PlaceholderPage`). The auth contract is confirmed by the API team (documented in `src/api/auth.ts`), but the endpoints are not in the API yet, so the front keeps using the local mocks where needed. Deployment and CI are not set up yet.
 
 ## Commands
 
@@ -78,7 +78,7 @@ Cloudflare docs change often, so read the current docs before setting up deploym
 
 ### Code and config
 
-- Entry chain: `index.html` → `src/main.tsx`, which mounts `<App>` inside `StrictMode` and `BrowserRouter` → `src/App.tsx`, which defines the routes. Files in `public/` are served from the site root unchanged. Assets in `src/assets/` are imported, so Vite fingerprints them.
+- Entry chain: `index.html` → `src/main.tsx`, which mounts `<App>` inside `StrictMode` and `BrowserRouter` → `src/App.tsx`, which defines the routes. Files in `public/` are served from the site root unchanged. Assets in `src/assets/` (none yet) would be imported, so Vite fingerprints them.
 - The TypeScript setup uses project references. `tsconfig.app.json` covers `src/` (DOM libs, `vite/client` types), including test files. `tsconfig.node.json` covers the root config files `vite.config.ts` and `vitest.config.ts` (Node types). Add any new root-level TS config to `tsconfig.node.json`'s `include`, or it won't be type-checked.
 - `erasableSyntaxOnly` is on, so TS `enum`s, `namespace`s and constructor parameter properties are compile errors. Model `Role`, `OrderStatus` and similar types as string-literal unions or `as const` objects.
 - `verbatimModuleSyntax` is on, so type-only imports must use `import type`.
@@ -99,12 +99,16 @@ The API is freshly scaffolded and evolves in parallel. Check `quickdish-api` for
 
 - **The only endpoint is `GET /health` → `{"status":"ok"}`.** No other routes exist, and the Prisma schema has no models.
 - Local dev URL: `http://localhost:8787` (`pnpm dev` in `quickdish-api`). Deployed URLs don't exist yet. There will be separate Dev and Prod Workers, each with its own D1 database.
-- **CORS is not configured.** The SPA and the API are on different origins, so the API will need `hono/cors` allowing the Pages origins and the local Vite origin. A Vite dev `server.proxy` avoids CORS locally but not in deployed environments.
-- Auth will use JWT (`hono/jwt`). How the token travels is not decided. A bearer token in the `Authorization` header is the simplest choice across domains. Cookies across `*.pages.dev` and `*.workers.dev` are cross-site and need `SameSite=None; Secure` plus credentialed CORS. Settle this with the user before building auth.
-- Assumed auth contract (`src/api/auth.ts`, until #8 exists): `POST /auth/login` and `POST /auth/register` return `{ token }`, and the JWT payload carries `role` (`CUSTOMER` or `ADMIN`) and `exp`. The frontend reads the role without checking the signature; the API checks it on every request.
-- Not decided yet: route names, response and error shapes, pagination, and how prices are represented (decimal or integer cents).
+- **CORS:** the API enables `hono/cors` for `http://localhost:5173` (#5). The Pages origins are added once #14 exists. Other local ports (such as 5180) are not allowed.
+- **Auth:** JWT, sent as `Authorization: Bearer <token>`. Cookies are not used.
+- **Confirmed contract (#4, by Ale):**
+    - `POST /auth/login` and `POST /auth/register` return `{ token, user }`, where `user = { id, name, email, role }`.
+    - The JWT carries `sub`, `role` (`CUSTOMER` or `ADMIN`) and `exp` (8 h). The frontend reads the role without checking the signature; the API checks it on every request.
+    - Ids are strings (UUID). Prices are integers in cents (`priceCents`, `totalCents`, `unitPriceCents`).
+    - Errors are always `{ "error": { "code": "...", "message": "..." } }`.
+- Endpoints that are still missing: categories, products, cart and orders. Until they exist, the menu uses mocks.
 
-Until the API contract exists:
+Until the rest of the contract exists:
 
 - Put every API call in one typed client module (e.g. `src/api/`), so endpoints can change in one place.
 - Read the base URL from `VITE_API_URL`, with one value per environment (local, Dev, Prod). Never hard-code it.
