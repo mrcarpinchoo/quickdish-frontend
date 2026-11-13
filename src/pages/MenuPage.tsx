@@ -16,15 +16,15 @@ export function MenuPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">Menú</h1>
+      <h1 className="text-2xl font-semibold">Menu</h1>
 
       <div
         role="group"
-        aria-label="Categorías"
+        aria-label="Categories"
         className="flex flex-wrap gap-2"
       >
         <CategoryChip
-          label="Todas"
+          label="All"
           active={selected === ALL_CATEGORIES}
           onClick={() => setSelected(ALL_CATEGORIES)}
         />
@@ -39,7 +39,7 @@ export function MenuPage() {
       </div>
 
       {products.length === 0 ?
-        <p className="text-stone-600">No hay platillos en esta categoría.</p>
+        <p className="text-stone-600">No dishes in this category.</p>
       : <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {products.map(product => (
             <li key={product.id}>
@@ -110,7 +110,7 @@ function ProductCard({ product }: { product: Product }) {
             disabled={!product.available}
             className="rounded-md bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700 disabled:bg-stone-300 disabled:text-stone-600"
           >
-            {product.available ? "Agregar al carrito" : "No disponible"}
+            {product.available ? "Add to cart" : "Unavailable"}
           </button>
         </div>
       </div>

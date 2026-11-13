@@ -9,24 +9,24 @@ type NavItem = { to: string; label: string };
 
 /** Links depend on the role, so each user only sees pages they can open. */
 function navItems(role: Role | null): NavItem[] {
-  const items: NavItem[] = [{ to: "/", label: "Menú" }];
+  const items: NavItem[] = [{ to: "/", label: "Menu" }];
 
   if (role) {
     items.push(
-      { to: "/cart", label: "Carrito" },
-      { to: "/orders", label: "Mis pedidos" }
+      { to: "/cart", label: "Cart" },
+      { to: "/orders", label: "My orders" }
     );
   }
   if (role === "ADMIN") {
     items.push(
-      { to: "/admin/orders", label: "Pedidos (admin)" },
-      { to: "/admin/menu", label: "Menú (admin)" }
+      { to: "/admin/orders", label: "Orders (admin)" },
+      { to: "/admin/menu", label: "Menu (admin)" }
     );
   }
   if (!role) {
     items.push(
-      { to: "/login", label: "Iniciar sesión" },
-      { to: "/register", label: "Registrarse" }
+      { to: "/login", label: "Sign in" },
+      { to: "/register", label: "Sign up" }
     );
   }
   return items;
@@ -55,13 +55,13 @@ export function Layout() {
                 onClick={signOut}
                 className="rounded-md px-3 py-1 text-sm text-stone-700 ring-1 ring-stone-300 hover:bg-stone-100"
               >
-                Salir
+                Sign out
               </button>
             )}
           </div>
         </div>
         <nav
-          aria-label="Principal"
+          aria-label="Main"
           className="mx-auto flex max-w-5xl flex-wrap gap-x-4 gap-y-2 px-4 pb-3 text-sm"
         >
           {navItems(role).map(item => (

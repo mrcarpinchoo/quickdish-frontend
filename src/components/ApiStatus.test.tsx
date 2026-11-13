@@ -22,7 +22,7 @@ describe("ApiStatus", () => {
 
     render(<ApiStatus />);
 
-    expect(await screen.findByText("API en línea")).toBeInTheDocument();
+    expect(await screen.findByText("API online")).toBeInTheDocument();
   });
 
   it("shows offline when the API cannot be reached", async () => {
@@ -33,6 +33,6 @@ describe("ApiStatus", () => {
 
     render(<ApiStatus />);
 
-    expect(await screen.findByText("API sin conexión")).toBeInTheDocument();
+    expect(await screen.findByText("API offline")).toBeInTheDocument();
   });
 });

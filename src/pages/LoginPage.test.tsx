@@ -17,11 +17,11 @@ function renderLogin(state?: unknown) {
           />
           <Route
             path="/cart"
-            element={<h1>Destino carrito</h1>}
+            element={<h1>Cart destination</h1>}
           />
           <Route
             path="/"
-            element={<h1>Destino menú</h1>}
+            element={<h1>Menu destination</h1>}
           />
         </Routes>
       </MemoryRouter>
@@ -31,9 +31,9 @@ function renderLogin(state?: unknown) {
 
 async function fillAndSubmit(email: string, password: string) {
   const user = userEvent.setup();
-  await user.type(screen.getByLabelText("Correo"), email);
-  await user.type(screen.getByLabelText("Contraseña"), password);
-  await user.click(screen.getByRole("button", { name: "Iniciar sesión" }));
+  await user.type(screen.getByLabelText("Email"), email);
+  await user.type(screen.getByLabelText("Password"), password);
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
 }
 
 describe("LoginPage", () => {
@@ -56,9 +56,7 @@ describe("LoginPage", () => {
 
     await fillAndSubmit("no-es-correo", "secreto123");
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Escribe un correo válido."
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter a valid email.");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -68,7 +66,7 @@ describe("LoginPage", () => {
         JSON.stringify({
           error: {
             code: "invalid_credentials",
-            message: "Correo o contraseña incorrectos."
+            message: "Incorrect email or password."
           }
         }),
         { status: 401 }
@@ -79,7 +77,7 @@ describe("LoginPage", () => {
     await fillAndSubmit("ana@example.com", "mal");
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Correo o contraseña incorrectos."
+      "Incorrect email or password."
     );
   });
 
@@ -93,7 +91,7 @@ describe("LoginPage", () => {
     await fillAndSubmit("ana@example.com", "secreto123");
 
     expect(
-      await screen.findByRole("heading", { name: "Destino carrito" })
+      await screen.findByRole("heading", { name: "Cart destination" })
     ).toBeInTheDocument();
     expect(window.localStorage.getItem("quickdish.token")).toBe(token);
   });

@@ -49,8 +49,6 @@ describe("MenuPage", () => {
       </MemoryRouter>
     );
 
-    expect(
-      screen.getByRole("button", { name: "No disponible" })
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Unavailable" })).toBeDisabled();
   });
 });

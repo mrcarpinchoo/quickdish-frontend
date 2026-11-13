@@ -5,8 +5,8 @@ type Status = "checking" | "online" | "offline";
 
 const labels: Record<Status, string> = {
   checking: "Comprobando API…",
-  online: "API en línea",
-  offline: "API sin conexión"
+  online: "API online",
+  offline: "API offline"
 };
 
 /** Calls GET /health once on mount, so the header shows whether the API answers. */

@@ -40,17 +40,17 @@ describe("App", () => {
     renderAt("/");
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Menú" })
+      screen.getByRole("heading", { level: 1, name: "Menu" })
     ).toBeInTheDocument();
     expect(screen.getByText("DEV · a1b2c3d")).toBeInTheDocument();
-    expect(await screen.findByText("API en línea")).toBeInTheDocument();
+    expect(await screen.findByText("API online")).toBeInTheDocument();
   });
 
   it("sends anonymous visitors from /cart to the login page", () => {
     renderAt("/cart");
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Iniciar sesión" })
+      screen.getByRole("heading", { level: 1, name: "Sign in" })
     ).toBeInTheDocument();
   });
 
@@ -63,7 +63,7 @@ describe("App", () => {
     renderAt("/admin/orders");
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Menú" })
+      screen.getByRole("heading", { level: 1, name: "Menu" })
     ).toBeInTheDocument();
   });
 
@@ -76,7 +76,7 @@ describe("App", () => {
     renderAt("/admin/orders");
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Pedidos" })
+      screen.getByRole("heading", { level: 1, name: "Orders" })
     ).toBeInTheDocument();
   });
 });
