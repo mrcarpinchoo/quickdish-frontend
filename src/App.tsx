@@ -5,6 +5,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { MenuPage } from "./pages/MenuPage";
 import { ProductPage } from "./pages/ProductPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { AdminOrdersPage } from "./pages/AdminOrdersPage";
 import { CartPage } from "./pages/CartPage";
 import { OrderPage } from "./pages/OrderPage";
 import { OrdersPage } from "./pages/OrdersPage";
@@ -58,7 +59,7 @@ function App() {
           path="admin/orders"
           element={
             <RequireRole role="ADMIN">
-              <PlaceholderPage title="Orders" />
+              <AdminOrdersPage />
             </RequireRole>
           }
         />
