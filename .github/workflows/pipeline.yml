@@ -76,3 +76,60 @@ jobs:
         with:
           name: frontend-build
           path: dist
+
+  # Deploys only run on pushes to main: pull requests stop after Test and Build.
+  # The deploy-site action builds for the environment, uploads to Pages and
+  # checks that the site serves the new build.
+  deploy-dev:
+    name: Deploy to Development
+    needs: [test, build]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: Development
+      url: ${{ steps.deploy.outputs.url }}
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Deploy to Development
+        id: deploy
+        uses: ./.github/actions/deploy-site
+        with:
+          mode: dev
+          project: quickdish-frontend-dev
+          cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          cloudflare-account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # Waits for a reviewer to approve the Production environment.
+  deploy-prod:
+    name: Deploy to Production
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment:
+      name: Production
+      url: ${{ steps.deploy.outputs.url }}
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Deploy to Production
+        id: deploy
+        uses: ./.github/actions/deploy-site
+        with:
+          mode: prod
+          project: quickdish-frontend-prod
+          cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          cloudflare-account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
