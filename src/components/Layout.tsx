@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router";
 import { useAuth } from "../auth/useAuth";
+import { useCart } from "../cart/useCart";
 import { appConfig } from "../lib/config";
 import type { Role } from "../types/auth";
 import { ApiStatus } from "./ApiStatus";
@@ -35,6 +36,7 @@ function navItems(role: Role | null): NavItem[] {
 export function Layout() {
   const { environment, version } = appConfig();
   const { role, signOut } = useAuth();
+  const { itemCount } = useCart();
 
   return (
     <div className="min-h-svh bg-stone-50 text-stone-900">
@@ -76,6 +78,11 @@ export function Layout() {
               }
             >
               {item.label}
+              {item.to === "/cart" && itemCount > 0 && (
+                <span className="ml-1 rounded-full bg-orange-600 px-1.5 text-xs text-white">
+                  {itemCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

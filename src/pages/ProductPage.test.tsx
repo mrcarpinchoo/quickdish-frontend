@@ -1,18 +1,18 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { screen } from "@testing-library/react";
+import { Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
+import { renderWithProviders } from "../test/render";
 import { ProductPage } from "./ProductPage";
 
 function renderProduct(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route
-          path="/products/:id"
-          element={<ProductPage />}
-        />
-      </Routes>
-    </MemoryRouter>
+  return renderWithProviders(
+    <Routes>
+      <Route
+        path="/products/:id"
+        element={<ProductPage />}
+      />
+    </Routes>,
+    { route: path }
   );
 }
 

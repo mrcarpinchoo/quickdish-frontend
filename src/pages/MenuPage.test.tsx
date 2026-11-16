@@ -1,16 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
+import { renderWithProviders } from "../test/render";
 import { MenuPage } from "./MenuPage";
 
 describe("MenuPage", () => {
   it("shows every product by default", () => {
-    render(
-      <MemoryRouter>
-        <MenuPage />
-      </MemoryRouter>
-    );
+    renderWithProviders(<MenuPage />);
 
     expect(
       screen.getByRole("heading", { name: "Guacamole con totopos" })
@@ -22,11 +18,7 @@ describe("MenuPage", () => {
 
   it("filters the products by category", async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <MenuPage />
-      </MemoryRouter>
-    );
+    renderWithProviders(<MenuPage />);
 
     await user.click(screen.getByRole("button", { name: "Bebidas" }));
 
@@ -43,11 +35,7 @@ describe("MenuPage", () => {
   });
 
   it("disables the add button for unavailable products", () => {
-    render(
-      <MemoryRouter>
-        <MenuPage />
-      </MemoryRouter>
-    );
+    renderWithProviders(<MenuPage />);
 
     expect(screen.getByRole("button", { name: "Unavailable" })).toBeDisabled();
   });

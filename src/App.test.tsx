@@ -1,18 +1,11 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { AuthProvider } from "./auth/AuthProvider";
 import { makeToken } from "./test/tokens";
+import { renderWithProviders } from "./test/render";
 
 function renderAt(path: string) {
-  return render(
-    <AuthProvider>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
-    </AuthProvider>
-  );
+  return renderWithProviders(<App />, { route: path });
 }
 
 describe("App", () => {
