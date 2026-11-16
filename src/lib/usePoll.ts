@@ -11,3 +11,6 @@ export function usePoll(load: () => Promise<void>, intervalMs: number) {
 
 /** How often order screens reload, so admin changes show up without a refresh. */
 export const ORDER_REFRESH_MS = 15_000;
+
+/** The admin board reloads a little more often than the customer screens. */
+export const ADMIN_REFRESH_MS = 10_000;
