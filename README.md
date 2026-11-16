@@ -65,6 +65,15 @@ We use **GitHub Flow**:
 2. Open a pull request to `main` and get it approved by a teammate.
 3. Merging to `main` runs the pipeline: tests → deploy to Dev → manual approval → deploy to Prod.
 
+### Pipeline
+
+`.github/workflows/pipeline.yml` runs on every pull request and every push to `main`:
+
+- **Test:** type-checks, lints, checks formatting and runs the unit tests with coverage. The run summary shows the test results, and the `test-report` (JUnit) and `coverage-report` artifacts are attached to the run.
+- **Build:** builds the app and attaches `dist/` as the `frontend-build` artifact.
+
+Both jobs must pass before a pull request can be merged. The jobs run directly on the GitHub runner, with pnpm and Node.js versions taken from `package.json` and `.nvmrc`.
+
 ### Commit messages
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/):
