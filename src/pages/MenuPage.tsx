@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { mockCategories, mockProducts } from "../mocks/menu";
+import { AddToCartButton } from "../components/AddToCartButton";
 import { formatCents } from "../lib/money";
 import type { Product } from "../types/menu";
 
@@ -105,13 +106,10 @@ function ProductCard({ product }: { product: Product }) {
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
           <span className="font-semibold">{formatCents(product.price)}</span>
-          <button
-            type="button"
-            disabled={!product.available}
-            className="rounded-md bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700 disabled:bg-stone-300 disabled:text-stone-600"
-          >
-            {product.available ? "Add to cart" : "Unavailable"}
-          </button>
+          <AddToCartButton
+            productId={product.id}
+            available={product.available}
+          />
         </div>
       </div>
     </article>

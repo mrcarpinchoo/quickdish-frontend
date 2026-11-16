@@ -5,6 +5,9 @@ import { LoginPage } from "./pages/LoginPage";
 import { MenuPage } from "./pages/MenuPage";
 import { ProductPage } from "./pages/ProductPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { CartPage } from "./pages/CartPage";
+import { OrderPage } from "./pages/OrderPage";
+import { OrdersPage } from "./pages/OrdersPage";
 import { RegisterPage } from "./pages/RegisterPage";
 
 function App() {
@@ -31,7 +34,7 @@ function App() {
           path="cart"
           element={
             <RequireAuth>
-              <PlaceholderPage title="Cart" />
+              <CartPage />
             </RequireAuth>
           }
         />
@@ -39,7 +42,15 @@ function App() {
           path="orders"
           element={
             <RequireAuth>
-              <PlaceholderPage title="My orders" />
+              <OrdersPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="orders/:id"
+          element={
+            <RequireAuth>
+              <OrderPage />
             </RequireAuth>
           }
         />
