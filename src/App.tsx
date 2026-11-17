@@ -4,7 +4,7 @@ import { Layout } from "./components/Layout";
 import { LoginPage } from "./pages/LoginPage";
 import { MenuPage } from "./pages/MenuPage";
 import { ProductPage } from "./pages/ProductPage";
-import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { AdminMenuPage } from "./pages/AdminMenuPage";
 import { AdminOrdersPage } from "./pages/AdminOrdersPage";
 import { CartPage } from "./pages/CartPage";
 import { OrderPage } from "./pages/OrderPage";
@@ -67,7 +67,7 @@ function App() {
           path="admin/menu"
           element={
             <RequireRole role="ADMIN">
-              <PlaceholderPage title="Manage menu" />
+              <AdminMenuPage />
             </RequireRole>
           }
         />
