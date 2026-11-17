@@ -22,7 +22,7 @@ Project board: https://github.com/users/mrcarpinchoo/projects/2
 
 ## Current state
 
-The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest). The app has its shell: React Router routes, a layout with the environment badge and the API status, the typed API client in `src/api/client.ts`, and the menu screen with mock data (`src/mocks/menu.ts`). Login and register forms exist and the session lives in `AuthProvider` (`src/auth/`), with `RequireAuth` and `RequireRole` guarding routes. Cart, orders and the admin screens are still placeholders (`PlaceholderPage`). The auth contract is confirmed by the API team (documented in `src/api/auth.ts`), but the endpoints are not in the API yet, so the front keeps using the local mocks where needed. CI runs on every PR, and merges to `main` deploy to Development and, after approval, Production (see Architecture).
+The tooling is in place (Tailwind, Prettier, type-aware ESLint, Vitest). The app has its shell: React Router routes, a layout with the environment badge and the API status, the typed API client in `src/api/client.ts`, and the menu and product screens, which read the catalog from the API (`src/api/menu.ts`). Login and register forms exist and the session lives in `AuthProvider` (`src/auth/`), with `RequireAuth` and `RequireRole` guarding routes. Cart, orders and the admin screens are still placeholders (`PlaceholderPage`). The auth contract is confirmed by the API team (documented in `src/api/auth.ts`). CI runs on every PR, and merges to `main` deploy to Development and, after approval, Production (see Architecture).
 
 ## Commands
 

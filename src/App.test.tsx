@@ -15,11 +15,18 @@ describe("App", () => {
     vi.stubEnv("VITE_VERSION", "a1b2c3d");
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn<typeof fetch>()
-        .mockImplementation(() =>
-          Promise.resolve(new Response('{"status":"ok"}', { status: 200 }))
-        )
+      vi.fn<typeof fetch>().mockImplementation(input => {
+        const url =
+          typeof input === "string" ? input
+          : input instanceof URL ? input.href
+          : input.url;
+        // The menu reads the catalog; it is empty in these screen tests.
+        const body =
+          url.includes("/categories") || url.includes("/products") ?
+            "[]"
+          : '{"status":"ok"}';
+        return Promise.resolve(new Response(body, { status: 200 }));
+      })
     );
   });
 

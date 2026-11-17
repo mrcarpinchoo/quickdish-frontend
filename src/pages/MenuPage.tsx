@@ -1,24 +1,84 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { mockCategories, mockProducts } from "../mocks/menu";
+import { listCategories, listProducts } from "../api/menu";
 import { AddToCartButton } from "../components/AddToCartButton";
+import { errorMessage } from "../lib/errors";
 import { formatCents } from "../lib/money";
-import type { Product } from "../types/menu";
+import type { Category, Product } from "../types/menu";
 
 const ALL_CATEGORIES = "all";
 
+type MenuState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; categories: Category[]; products: Product[] };
+
 export function MenuPage() {
   const [selected, setSelected] = useState(ALL_CATEGORIES);
+  const [state, setState] = useState<MenuState>({ status: "loading" });
 
-  const categories = mockCategories.filter(category => category.active);
-  const products = mockProducts.filter(
-    product => selected === ALL_CATEGORIES || product.categoryId === selected
-  );
+  useEffect(() => {
+    let current = true;
+    Promise.all([listCategories(), listProducts()])
+      .then(([categories, products]) => {
+        if (current) setState({ status: "ready", categories, products });
+      })
+      .catch((err: unknown) => {
+        if (current) setState({ status: "error", message: errorMessage(err) });
+      });
+    return () => {
+      current = false;
+    };
+  }, []);
 
   return (
     <section className="space-y-6">
       <h1 className="text-2xl font-semibold">Menu</h1>
 
+      {state.status === "loading" && (
+        <p className="text-stone-600">Loading menu…</p>
+      )}
+
+      {state.status === "error" && (
+        <p
+          role="alert"
+          className="text-red-700"
+        >
+          {state.message}
+        </p>
+      )}
+
+      {state.status === "ready" && (
+        <MenuContent
+          categories={state.categories}
+          products={state.products}
+          selected={selected}
+          onSelect={setSelected}
+        />
+      )}
+    </section>
+  );
+}
+
+type MenuContentProps = {
+  categories: Category[];
+  products: Product[];
+  selected: string;
+  onSelect: (id: string) => void;
+};
+
+function MenuContent({
+  categories,
+  products,
+  selected,
+  onSelect
+}: MenuContentProps) {
+  const visible = products.filter(
+    product => selected === ALL_CATEGORIES || product.categoryId === selected
+  );
+
+  return (
+    <>
       <div
         role="group"
         aria-label="Categories"
@@ -27,29 +87,29 @@ export function MenuPage() {
         <CategoryChip
           label="All"
           active={selected === ALL_CATEGORIES}
-          onClick={() => setSelected(ALL_CATEGORIES)}
+          onClick={() => onSelect(ALL_CATEGORIES)}
         />
         {categories.map(category => (
           <CategoryChip
             key={category.id}
             label={category.name}
             active={selected === category.id}
-            onClick={() => setSelected(category.id)}
+            onClick={() => onSelect(category.id)}
           />
         ))}
       </div>
 
-      {products.length === 0 ?
+      {visible.length === 0 ?
         <p className="text-stone-600">No dishes in this category.</p>
       : <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map(product => (
+          {visible.map(product => (
             <li key={product.id}>
               <ProductCard product={product} />
             </li>
           ))}
         </ul>
       }
-    </section>
+    </>
   );
 }
 
@@ -105,7 +165,9 @@ function ProductCard({ product }: { product: Product }) {
         <p className="text-sm text-stone-600">{product.description}</p>
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <span className="font-semibold">{formatCents(product.price)}</span>
+          <span className="font-semibold">
+            {formatCents(product.priceCents)}
+          </span>
           <AddToCartButton
             productId={product.id}
             available={product.available}
