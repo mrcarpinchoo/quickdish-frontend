@@ -1,0 +1,65 @@
+name: Deploy site
+description: Builds the app for one environment, uploads it to its Cloudflare Pages project and checks that the site serves the new build.
+
+inputs:
+  mode:
+    description: Vite mode (dev or prod). Selects .env.dev or .env.prod.
+    required: true
+  project:
+    description: Cloudflare Pages project, created by Terraform in quickdish-infra.
+    required: true
+  cloudflare-api-token:
+    description: Cloudflare API token.
+    required: true
+  cloudflare-account-id:
+    description: Cloudflare account id.
+    required: true
+
+outputs:
+  url:
+    description: Public URL of the site.
+    value: ${{ steps.deploy.outputs.url }}
+
+runs:
+  using: composite
+  steps:
+    # Vite bakes the VITE_* values into the files, so each environment gets its
+    # own build. VITE_VERSION (short commit SHA) shows in the page's badge.
+    - name: Build
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+      run: VITE_VERSION="${GITHUB_SHA::7}" pnpm build --mode "$MODE"
+
+    # Deploying the `main` branch makes it the project's production deployment,
+    # served at https://<project>.pages.dev.
+    - name: Deploy to Cloudflare Pages
+      id: deploy
+      shell: bash
+      env:
+        PROJECT: ${{ inputs.project }}
+        CLOUDFLARE_API_TOKEN: ${{ inputs.cloudflare-api-token }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.cloudflare-account-id }}
+      run: |
+        npx --yes wrangler@4.159.0 pages deploy dist \
+          --project-name "$PROJECT" --branch main --commit-hash "$GITHUB_SHA"
+        echo "url=https://$PROJECT.pages.dev" >> "$GITHUB_OUTPUT"
+
+    # The new build is live when the site's index.html loads the same main
+    # script (its name includes a content hash) as the one just built.
+    - name: Smoke test
+      shell: bash
+      env:
+        URL: ${{ steps.deploy.outputs.url }}
+      run: |
+        script=$(grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -n 1)
+        for attempt in $(seq 1 12); do
+          if curl -fsS "$URL" | grep -q "$script"; then
+            echo "Live: $URL serves $script"
+            exit 0
+          fi
+          echo "Attempt $attempt: $URL doesn't serve the new build yet"
+          sleep 5
+        done
+        echo "::error::$URL didn't serve the new build ($script)"
+        exit 1
