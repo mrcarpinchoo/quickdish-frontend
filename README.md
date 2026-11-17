@@ -74,6 +74,13 @@ We use **GitHub Flow**:
 
 Both jobs must pass before a pull request can be merged. The jobs run directly on the GitHub runner, with pnpm and Node.js versions taken from `package.json` and `.nvmrc`.
 
+On a push to `main` (a merged pull request), two more jobs deploy the site to Cloudflare Pages:
+
+- **Deploy to Development:** builds with `.env.dev` (the Dev API), uploads to `quickdish-frontend-dev` and checks that https://quickdish-frontend-dev.pages.dev serves the new build.
+- **Deploy to Production:** waits until a reviewer approves the `Production` environment, then does the same with `.env.prod` and `quickdish-frontend-prod`.
+
+Vite bakes the `VITE_*` values into the files, so each environment gets its own build. To reproduce one locally, run `pnpm build --mode dev` or `pnpm build --mode prod`. The badge in the header shows the environment and the commit.
+
 ### Commit messages
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/):
