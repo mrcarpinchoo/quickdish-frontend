@@ -4,7 +4,6 @@ import type { Cart } from "../types/cart";
 /** What the customer chooses before a dish goes to the cart. */
 export type AddChoices = {
   quantity: number;
-  size?: string;
 };
 
 export type CartState = {

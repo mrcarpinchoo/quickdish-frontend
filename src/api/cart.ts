@@ -8,11 +8,10 @@ export function getCart() {
   return apiRequest<Cart>("/cart");
 }
 
-/** `notes` carries the chosen size as text (see sizeNote). */
-export function addCartItem(productId: string, quantity = 1, notes?: string) {
+export function addCartItem(productId: string, quantity = 1) {
   return apiRequest<Cart>("/cart/items", {
     method: "POST",
-    body: notes ? { productId, quantity, notes } : { productId, quantity }
+    body: { productId, quantity }
   });
 }
 

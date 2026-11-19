@@ -83,28 +83,19 @@ describe("AddToCartButton", () => {
     expect(window.localStorage.getItem("quickdish.guestCart")).toBeNull();
   });
 
-  it("sends size and notes together for a signed-in customer", async () => {
+  it("sends the chosen quantity for a signed-in customer", async () => {
     const user = userEvent.setup();
-    const drink: Product = {
-      ...product,
-      id: "3c9e7a10-0002-4f2b-8e5a-000000000007",
-      name: "Agua de horchata"
-    };
     vi.mocked(getCart).mockResolvedValue(emptyCart);
     vi.mocked(addCartItem).mockResolvedValue(emptyCart);
-    renderButton("CUSTOMER", drink);
+    renderButton("CUSTOMER");
 
     await user.click(
       await screen.findByRole("button", { name: "Add to cart" })
     );
-    await user.click(screen.getByRole("radio", { name: /Grande/ }));
-    await user.click(screen.getByRole("button", { name: /Add 1 to order/ }));
+    await user.click(screen.getByRole("button", { name: "Increase quantity" }));
+    await user.click(screen.getByRole("button", { name: /Add 2 to order/ }));
 
-    expect(addCartItem).toHaveBeenCalledWith(
-      "3c9e7a10-0002-4f2b-8e5a-000000000007",
-      1,
-      "Size: Grande (700 ml)"
-    );
+    expect(addCartItem).toHaveBeenCalledWith(product.id, 2);
   });
 
   it("shows the reason when the API refuses the dish", async () => {

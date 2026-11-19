@@ -3,7 +3,6 @@ import { useCart } from "../cart/useCart";
 import { cartErrorMessage } from "../lib/errors";
 import { formatCents } from "../lib/money";
 import { productImageUrl } from "../lib/menu-images";
-import { sizesFor } from "../lib/dish-options";
 import { MAX_QUANTITY } from "../types/cart";
 import type { Product } from "../types/menu";
 
@@ -13,7 +12,7 @@ type AddToCartDialogProps = {
   onAdded: () => void;
 };
 
-/** Pop-up that asks for size and quantity before a dish goes to the cart. */
+/** Pop-up that asks for the quantity before a dish goes to the cart. */
 export function AddToCartDialog({
   product,
   onClose,
@@ -21,8 +20,6 @@ export function AddToCartDialog({
 }: AddToCartDialogProps) {
   const { addItem } = useCart();
   const titleId = useId();
-  const sizes = sizesFor(product.id);
-  const [size, setSize] = useState(sizes[0]);
   const [quantity, setQuantity] = useState(1);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,10 +44,7 @@ export function AddToCartDialog({
     setPending(true);
     setError(null);
     try {
-      await addItem(product.id, {
-        quantity,
-        size
-      });
+      await addItem(product.id, { quantity });
       onAdded();
       onClose();
     } catch (caught) {
@@ -108,33 +102,6 @@ export function AddToCartDialog({
             <p className="text-sm text-stone-600">{product.description}</p>
           )}
 
-          {sizes.length > 0 && (
-            <fieldset className="space-y-2">
-              <legend className="mb-2 text-sm font-semibold">Size</legend>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {sizes.map(option => (
-                  <label
-                    key={option}
-                    className={`flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm ring-1 ${
-                      size === option ?
-                        "bg-brand-50 font-medium text-brand-800 ring-brand-400"
-                      : "bg-white ring-stone-200 hover:bg-stone-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="size"
-                      value={option}
-                      checked={size === option}
-                      onChange={() => setSize(option)}
-                      className="accent-brand-600"
-                    />
-                    {option}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          )}
           {error && (
             <p
               role="alert"

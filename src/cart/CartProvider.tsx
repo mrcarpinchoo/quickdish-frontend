@@ -13,7 +13,6 @@ import {
   updateCartItem
 } from "../api/cart";
 import { useAuth } from "../auth/useAuth";
-import { sizeNote } from "../lib/dish-options";
 import type { Cart } from "../types/cart";
 import { CartContext, type CartState } from "./CartContext";
 
@@ -52,9 +51,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         visibleCart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0,
       refresh,
       addItem: async (productId, choices) => {
-        setCart(
-          await addCartItem(productId, choices.quantity, sizeNote(choices.size))
-        );
+        setCart(await addCartItem(productId, choices.quantity));
       },
       setQuantity: async (itemId, quantity) => {
         setCart(await updateCartItem(itemId, { quantity }));
