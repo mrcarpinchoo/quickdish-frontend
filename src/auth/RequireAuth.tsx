@@ -33,7 +33,7 @@ export function RequireRole({ role, children }: GuardProps & { role: Role }) {
       {current === role ?
         children
       : <Navigate
-          to="/"
+          to="/menu"
           replace
         />
       }

@@ -22,7 +22,7 @@ describe("EnvBadge", () => {
       />
     );
     const dev = screen.getByText("DEV · a1b2c3d");
-    expect(dev).toHaveClass("bg-amber-100");
+    expect(dev).toHaveClass("bg-sun-100");
 
     rerender(
       <EnvBadge

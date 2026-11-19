@@ -20,6 +20,10 @@ function App() {
           element={<MenuPage />}
         />
         <Route
+          path="menu"
+          element={<MenuPage />}
+        />
+        <Route
           path="products/:id"
           element={<ProductPage />}
         />

@@ -55,10 +55,10 @@ export function OrderPage() {
   }
 
   return (
-    <article className="mx-auto max-w-xl space-y-6">
+    <article className="mx-auto max-w-2xl space-y-6">
       <Link
         to="/orders"
-        className="text-sm text-orange-700 underline"
+        className="text-sm font-medium text-brand-700 hover:underline"
       >
         Back to my orders
       </Link>
@@ -66,7 +66,7 @@ export function OrderPage() {
       {placed && (
         <p
           role="status"
-          className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-800"
+          className="rounded-2xl bg-emerald-50 p-4 text-sm font-medium text-emerald-800 ring-1 ring-emerald-100"
         >
           Thanks! Your order was placed.
         </p>
@@ -74,7 +74,7 @@ export function OrderPage() {
 
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Order</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Order</h1>
           <p className="text-sm text-stone-600">
             {formatDateTime(order.createdAt)}
           </p>
@@ -82,7 +82,7 @@ export function OrderPage() {
         <StatusBadge status={order.status} />
       </header>
 
-      <ul className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
+      <ul className="divide-y divide-stone-100 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-100">
         {order.items.map(item => (
           <li
             key={item.id}
@@ -106,9 +106,9 @@ export function OrderPage() {
         ))}
       </ul>
 
-      <p className="flex justify-between text-lg font-semibold">
+      <p className="flex justify-between rounded-2xl bg-white p-4 text-lg font-semibold shadow-sm ring-1 ring-stone-100">
         <span>Total</span>
-        <span>{formatCents(order.totalCents)}</span>
+        <span className="text-brand-600">{formatCents(order.totalCents)}</span>
       </p>
 
       {order.notes && (
@@ -129,7 +129,7 @@ export function OrderPage() {
           type="button"
           disabled={cancelling}
           onClick={() => void cancel()}
-          className="rounded-md px-4 py-2 font-medium text-red-700 ring-1 ring-red-300 hover:bg-red-50 disabled:text-stone-400"
+          className="rounded-xl px-4 py-2.5 font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-50 disabled:text-stone-400"
         >
           {cancelling ? "Cancelling…" : "Cancel order"}
         </button>

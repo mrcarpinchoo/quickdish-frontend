@@ -1,4 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useState,
+  type FormEvent,
+  type ReactNode
+} from "react";
 import {
   createCategory,
   createProduct,
@@ -24,13 +30,43 @@ function parsePriceToCents(text: string): number | null {
   return cents > 0 ? cents : null;
 }
 
+/** Text for an optional field: empty input means "no value" (null). */
+function optionalText(text: string): string | null {
+  const trimmed = text.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+type Tab = "dishes" | "categories";
+
+type DialogState =
+  | { kind: "new-dish" }
+  | { kind: "edit-dish"; product: Product }
+  | { kind: "new-category" }
+  | { kind: "edit-category"; category: Category }
+  | null;
+
+type Notice = { tone: "ok" | "error"; text: string };
+
 export function AdminMenuPage() {
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [products, setProducts] = useState<Product[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("dishes");
+  const [dialog, setDialog] = useState<DialogState>(null);
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
+  async function loadAll() {
+    const [loadedCategories, loadedProducts] = await Promise.all([
+      listAllCategories(),
+      listAllProducts()
+    ]);
+    setCategories(loadedCategories);
+    setProducts(loadedProducts);
+    setLoadError(null);
+  }
 
   useEffect(() => {
     let current = true;
@@ -49,311 +85,586 @@ export function AdminMenuPage() {
     };
   }, []);
 
+  /** Refreshes the lists, keeping any message that is already on screen. */
   async function reload() {
     try {
-      const [loadedCategories, loadedProducts] = await Promise.all([
-        listAllCategories(),
-        listAllProducts()
-      ]);
-      setCategories(loadedCategories);
-      setProducts(loadedProducts);
-      setLoadError(null);
+      await loadAll();
     } catch (caught) {
       setLoadError(errorMessage(caught));
     }
   }
 
-  /** Runs one change, shows the API's message on failure, then reloads. */
-  async function run(id: string, action: () => Promise<unknown>) {
+  /** Runs one change, says what happened, then reloads the lists. */
+  async function run(id: string, action: () => Promise<unknown>, done: string) {
     setBusyId(id);
-    setActionError(null);
+    setNotice(null);
     try {
       await action();
+      setNotice({ tone: "ok", text: done });
       await reload();
     } catch (caught) {
-      setActionError(errorMessage(caught));
+      setNotice({ tone: "error", text: errorMessage(caught) });
     } finally {
       setBusyId(null);
     }
   }
 
-  /** Closes the edit form and refreshes the list after a successful save. */
-  async function finishEdit() {
-    setEditingId(null);
+  async function saved(text: string) {
+    setDialog(null);
+    setNotice({ tone: "ok", text });
     await reload();
   }
 
+  function toggleAvailability(product: Product) {
+    return run(
+      product.id,
+      () => setProductAvailability(product.id, !product.available),
+      product.available ?
+        `${product.name} is now hidden from customers.`
+      : `${product.name} is available again.`
+    );
+  }
+
+  function removeProduct(product: Product) {
+    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`))
+      return;
+    return run(
+      product.id,
+      () => deleteProduct(product.id),
+      `${product.name} was deleted.`
+    );
+  }
+
   function toggleCategory(category: Category) {
-    return run(category.id, () =>
-      updateCategory(category.id, { active: !category.active })
+    return run(
+      category.id,
+      () => updateCategory(category.id, { active: !category.active }),
+      category.active ?
+        `${category.name} is hidden from customers.`
+      : `${category.name} is visible again.`
     );
   }
 
   function removeCategory(category: Category) {
     if (!window.confirm(`Delete the category "${category.name}"?`)) return;
-    return run(category.id, () => deleteCategory(category.id));
-  }
-
-  function toggleAvailability(product: Product) {
-    return run(product.id, () =>
-      setProductAvailability(product.id, !product.available)
+    return run(
+      category.id,
+      () => deleteCategory(category.id),
+      `${category.name} was deleted.`
     );
   }
 
-  function removeProduct(product: Product) {
-    if (!window.confirm(`Delete the dish "${product.name}"?`)) return;
-    return run(product.id, () => deleteProduct(product.id));
-  }
-
-  const loading = categories === null && products === null && !loadError;
-
-  return (
-    <section className="space-y-8">
-      <h1 className="text-2xl font-semibold">Manage menu</h1>
-
-      {loading && <p className="text-stone-600">Loading menu…</p>}
-
-      {loadError && (
+  if (loadError) {
+    return (
+      <section className="space-y-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Manage menu</h1>
         <p
           role="alert"
-          className="text-red-700"
+          className="rounded-xl bg-red-50 p-4 text-red-700"
         >
           {loadError}
         </p>
-      )}
-      {actionError && (
+      </section>
+    );
+  }
+
+  if (categories === null || products === null) {
+    return (
+      <section className="space-y-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Manage menu</h1>
+        <p className="text-stone-600">Loading your menu…</p>
+      </section>
+    );
+  }
+
+  const activeCategoryIds = new Set(
+    categories.filter(category => category.active).map(category => category.id)
+  );
+  const categoryName = new Map(
+    categories.map(category => [category.id, category.name])
+  );
+  const dishCount = (categoryId: string) =>
+    products.filter(product => product.categoryId === categoryId).length;
+
+  const search = query.trim().toLowerCase();
+  const visibleProducts = products.filter(
+    product =>
+      (categoryFilter === "all" || product.categoryId === categoryFilter) &&
+      (search === "" || product.name.toLowerCase().includes(search))
+  );
+
+  return (
+    <section className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Manage menu</h1>
+          <p className="text-sm text-stone-500">
+            Add dishes, change prices and decide what customers can order.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setDialog({ kind: "new-category" })}
+            className="rounded-xl bg-white px-4 py-2.5 font-semibold text-stone-800 ring-1 ring-stone-200 hover:bg-stone-50"
+          >
+            + New category
+          </button>
+          <button
+            type="button"
+            onClick={() => setDialog({ kind: "new-dish" })}
+            disabled={categories.length === 0}
+            className="rounded-xl bg-brand-600 px-4 py-2.5 font-semibold text-white shadow-sm hover:bg-brand-700 disabled:bg-stone-300"
+          >
+            + New dish
+          </button>
+        </div>
+      </div>
+
+      {notice && (
         <p
-          role="alert"
-          className="rounded-md bg-red-50 p-3 text-sm text-red-700"
+          role={notice.tone === "error" ? "alert" : "status"}
+          className={`rounded-xl p-3 text-sm font-medium ${
+            notice.tone === "error" ?
+              "bg-red-50 text-red-700"
+            : "bg-brand-50 text-brand-800"
+          }`}
         >
-          {actionError}
+          {notice.text}
         </p>
       )}
 
-      {categories && (
+      <div
+        role="tablist"
+        aria-label="Menu sections"
+        className="inline-flex gap-1 rounded-2xl bg-white p-1 text-sm font-semibold shadow-sm ring-1 ring-stone-100"
+      >
+        <TabButton
+          active={tab === "dishes"}
+          onClick={() => setTab("dishes")}
+          label={`Dishes (${products.length})`}
+        />
+        <TabButton
+          active={tab === "categories"}
+          onClick={() => setTab("categories")}
+          label={`Categories (${categories.length})`}
+        />
+      </div>
+
+      {tab === "dishes" ?
         <section
-          aria-labelledby="categories-heading"
-          className="space-y-4"
+          role="tabpanel"
+          aria-label="Dishes"
+          className="space-y-5"
         >
-          <h2
-            id="categories-heading"
-            className="text-xl font-semibold"
-          >
-            Categories
-          </h2>
-
-          <CategoryForm onCreated={reload} />
-
-          {categories.length === 0 ?
-            <p className="text-stone-600">No categories yet.</p>
-          : <ul className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
-              {categories.map(category =>
-                editingId === category.id ?
-                  <li
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <label className="relative flex-1">
+              <span className="sr-only">Search dishes</span>
+              <input
+                type="search"
+                value={query}
+                onChange={event => setQuery(event.target.value)}
+                placeholder="Search dishes by name"
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm shadow-sm placeholder:text-stone-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-200 focus:outline-none"
+              />
+            </label>
+            <label className="sm:w-56">
+              <span className="sr-only">Filter by category</span>
+              <select
+                value={categoryFilter}
+                onChange={event => setCategoryFilter(event.target.value)}
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm shadow-sm focus:border-brand-400 focus:ring-2 focus:ring-brand-200 focus:outline-none"
+              >
+                <option value="all">All categories</option>
+                {categories.map(category => (
+                  <option
                     key={category.id}
-                    className="p-3"
+                    value={category.id}
                   >
-                    <CategoryEditForm
-                      category={category}
-                      onSaved={finishEdit}
-                      onCancel={() => setEditingId(null)}
-                    />
-                  </li>
-                : <li
-                    key={category.id}
-                    className="flex items-center justify-between gap-3 p-3"
-                  >
-                    <span>
-                      {category.name}
-                      {!category.active && (
-                        <span className="ml-2 text-sm text-stone-500">
-                          (inactive)
-                        </span>
-                      )}
-                    </span>
-                    <span className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(category.id)}
-                        className="rounded-md border border-stone-300 px-3 py-1 text-sm"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyId === category.id}
-                        onClick={() => void toggleCategory(category)}
-                        className="rounded-md border border-stone-300 px-3 py-1 text-sm"
-                      >
-                        {category.active ? "Deactivate" : "Activate"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyId === category.id}
-                        onClick={() => void removeCategory(category)}
-                        className="rounded-md border border-red-300 px-3 py-1 text-sm text-red-700"
-                      >
-                        Delete
-                      </button>
-                    </span>
-                  </li>
-              )}
-            </ul>
-          }
-        </section>
-      )}
-
-      {products && categories && (
-        <section
-          aria-labelledby="products-heading"
-          className="space-y-4"
-        >
-          <h2
-            id="products-heading"
-            className="text-xl font-semibold"
-          >
-            Dishes
-          </h2>
-
-          <ProductForm
-            categories={categories}
-            onCreated={reload}
-          />
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           {products.length === 0 ?
-            <p className="text-stone-600">No dishes yet.</p>
-          : <ul className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
-              {products.map(product =>
-                editingId === product.id ?
+            <EmptyState
+              title="No dishes yet"
+              text="Create your first dish and it will show up on the menu."
+              action={
+                categories.length === 0 ?
+                  undefined
+                : <button
+                    type="button"
+                    onClick={() => setDialog({ kind: "new-dish" })}
+                    className="rounded-xl bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700"
+                  >
+                    + New dish
+                  </button>
+              }
+              footer={
+                categories.length === 0 ?
+                  "First, create a category to group your dishes."
+                : undefined
+              }
+            />
+          : visibleProducts.length === 0 ?
+            <p className="rounded-2xl bg-white p-6 text-center text-stone-600 ring-1 ring-stone-100">
+              No dishes match your search.
+            </p>
+          : <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {visibleProducts.map(product => {
+                const hidden = !activeCategoryIds.has(product.categoryId);
+                return (
                   <li
                     key={product.id}
-                    className="p-3"
+                    className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-100"
                   >
-                    <ProductEditForm
-                      product={product}
-                      categories={categories}
-                      onSaved={finishEdit}
-                      onCancel={() => setEditingId(null)}
-                    />
-                  </li>
-                : <li
-                    key={product.id}
-                    className="flex flex-wrap items-center justify-between gap-3 p-3"
-                  >
-                    <span>
-                      {product.name}{" "}
-                      <span className="text-sm text-stone-600">
-                        {formatCents(product.priceCents)}
-                      </span>
-                      {!product.available && (
-                        <span className="ml-2 text-sm text-stone-500">
-                          (unavailable)
-                        </span>
-                      )}
-                    </span>
-                    <span className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(product.id)}
-                        className="rounded-md border border-stone-300 px-3 py-1 text-sm"
+                    <div className="flex gap-4">
+                      <div
+                        aria-hidden="true"
+                        className="flex h-20 w-20 flex-none items-center justify-center rounded-xl bg-stone-100 text-2xl text-stone-400"
                       >
-                        Edit
-                      </button>
+                        {product.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <h2 className="truncate font-semibold">
+                          {product.name}
+                        </h2>
+                        <p className="text-sm text-stone-500">
+                          {categoryName.get(product.categoryId) ??
+                            "No category"}
+                        </p>
+                        <p className="font-semibold text-brand-600">
+                          {formatCents(product.priceCents)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <StatusPill
+                        tone={
+                          hidden ? "amber"
+                          : product.available ?
+                            "green"
+                          : "stone"
+                        }
+                        text={
+                          hidden ? "Hidden (category off)"
+                          : product.available ?
+                            "Available"
+                          : "Sold out"
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-stone-100 pt-3">
                       <button
                         type="button"
                         disabled={busyId === product.id}
                         onClick={() => void toggleAvailability(product)}
-                        className="rounded-md border border-stone-300 px-3 py-1 text-sm"
+                        className="rounded-xl bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-800 hover:bg-stone-200 disabled:text-stone-400"
                       >
-                        {product.available ?
-                          "Mark unavailable"
-                        : "Mark available"}
+                        {product.available ? "Mark sold out" : "Mark available"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDialog({ kind: "edit-dish", product })
+                        }
+                        className="rounded-xl px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                      >
+                        Edit
                       </button>
                       <button
                         type="button"
                         disabled={busyId === product.id}
                         onClick={() => void removeProduct(product)}
-                        className="rounded-md border border-red-300 px-3 py-1 text-sm text-red-700"
+                        className="ml-auto rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:text-stone-400"
                       >
                         Delete
                       </button>
-                    </span>
+                    </div>
                   </li>
-              )}
+                );
+              })}
             </ul>
           }
         </section>
+      : <section
+          role="tabpanel"
+          aria-label="Categories"
+          className="space-y-5"
+        >
+          {categories.length === 0 ?
+            <EmptyState
+              title="No categories yet"
+              text="Categories group your dishes, like Drinks, Bowls or Desserts."
+              action={
+                <button
+                  type="button"
+                  onClick={() => setDialog({ kind: "new-category" })}
+                  className="rounded-xl bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700"
+                >
+                  + New category
+                </button>
+              }
+            />
+          : <ul className="grid gap-4 md:grid-cols-2">
+              {categories.map(category => (
+                <li
+                  key={category.id}
+                  className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <h2 className="font-semibold">{category.name}</h2>
+                      {category.description && (
+                        <p className="text-sm text-stone-500">
+                          {category.description}
+                        </p>
+                      )}
+                      <p className="text-sm text-stone-500">
+                        {dishCount(category.id)}{" "}
+                        {dishCount(category.id) === 1 ? "dish" : "dishes"}
+                      </p>
+                    </div>
+                    <StatusPill
+                      tone={category.active ? "green" : "stone"}
+                      text={category.active ? "Visible" : "Hidden"}
+                    />
+                  </div>
+
+                  <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-stone-100 pt-3">
+                    <button
+                      type="button"
+                      disabled={busyId === category.id}
+                      onClick={() => void toggleCategory(category)}
+                      className="rounded-xl bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-800 hover:bg-stone-200 disabled:text-stone-400"
+                    >
+                      {category.active ? "Hide from menu" : "Show on menu"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDialog({ kind: "edit-category", category })
+                      }
+                      className="rounded-xl px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === category.id}
+                      onClick={() => void removeCategory(category)}
+                      className="ml-auto rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:text-stone-400"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          }
+        </section>
+      }
+
+      {dialog?.kind === "new-dish" && categories.length > 0 && (
+        <ProductDialog
+          title="New dish"
+          categories={categories}
+          onClose={() => setDialog(null)}
+          onSaved={() => saved("Dish created.")}
+        />
+      )}
+      {dialog?.kind === "edit-dish" && (
+        <ProductDialog
+          title={`Edit ${dialog.product.name}`}
+          product={dialog.product}
+          categories={categories}
+          onClose={() => setDialog(null)}
+          onSaved={() => saved("Changes saved.")}
+        />
+      )}
+      {dialog?.kind === "new-category" && (
+        <CategoryDialog
+          title="New category"
+          onClose={() => setDialog(null)}
+          onSaved={() => saved("Category created.")}
+        />
+      )}
+      {dialog?.kind === "edit-category" && (
+        <CategoryDialog
+          title={`Edit ${dialog.category.name}`}
+          category={dialog.category}
+          products={products}
+          categoryName={categoryName}
+          onClose={() => setDialog(null)}
+          onSaved={() => saved("Changes saved.")}
+          onMoveDish={product =>
+            run(
+              product.id,
+              () =>
+                updateProduct(product.id, {
+                  categoryId: dialog.category.id
+                }),
+              `${product.name} is now in ${dialog.category.name}.`
+            )
+          }
+        />
       )}
     </section>
   );
 }
 
-function CategoryForm({ onCreated }: { onCreated: () => Promise<void> }) {
-  const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!name.trim()) {
-      setError("Enter a name for the category.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      await createCategory({ name: name.trim() });
-      setName("");
-      await onCreated();
-    } catch (caught) {
-      setError(errorMessage(caught));
-    } finally {
-      setSaving(false);
-    }
-  }
-
+function TabButton({
+  active,
+  onClick,
+  label
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
   return (
-    <form
-      onSubmit={event => void submit(event)}
-      className="flex flex-wrap items-end gap-3"
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`rounded-xl px-4 py-2 transition-colors ${
+        active ?
+          "bg-brand-600 text-white shadow-sm"
+        : "text-stone-600 hover:bg-stone-50"
+      }`}
     >
-      <label className="flex flex-col text-sm">
-        Category name
-        <input
-          value={name}
-          onChange={event => setName(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-md bg-orange-700 px-4 py-2 text-white"
-      >
-        Add category
-      </button>
-      {error && (
-        <p
-          role="alert"
-          className="w-full text-sm text-red-700"
-        >
-          {error}
-        </p>
-      )}
-    </form>
+      {label}
+    </button>
   );
 }
 
-function ProductForm({
-  categories,
-  onCreated
+function StatusPill({
+  tone,
+  text
 }: {
-  categories: Category[];
-  onCreated: () => Promise<void>;
+  tone: "green" | "stone" | "amber";
+  text: string;
 }) {
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const tones = {
+    green: "bg-brand-50 text-brand-800 ring-brand-200",
+    stone: "bg-stone-100 text-stone-600 ring-stone-200",
+    amber: "bg-sun-100 text-sun-800 ring-sun-300"
+  };
+  return (
+    <span
+      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${tones[tone]}`}
+    >
+      {text}
+    </span>
+  );
+}
+
+function EmptyState({
+  title,
+  text,
+  action,
+  footer
+}: {
+  title: string;
+  text: string;
+  action?: ReactNode;
+  footer?: string;
+}) {
+  return (
+    <div className="space-y-3 rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-stone-100">
+      <p className="text-lg font-semibold">{title}</p>
+      <p className="text-stone-600">{text}</p>
+      {action}
+      {footer && <p className="text-sm text-stone-500">{footer}</p>}
+    </div>
+  );
+}
+
+/** Shared pop-up frame for every create and edit form. */
+function Modal({
+  title,
+  onClose,
+  children
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const titleId = useId();
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 sm:items-center sm:p-4"
+      onMouseDown={event => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="flex max-h-[92svh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-stone-100 px-6 py-4">
+          <h2
+            id={titleId}
+            className="text-lg font-semibold"
+          >
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-stone-600 hover:bg-stone-200"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+const FIELD =
+  "mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm focus:border-brand-400 focus:ring-2 focus:ring-brand-200 focus:outline-none";
+
+function ProductDialog({
+  title,
+  product,
+  categories,
+  onClose,
+  onSaved
+}: {
+  title: string;
+  product?: Product;
+  categories: Category[];
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [name, setName] = useState(product?.name ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [price, setPrice] = useState(
+    product ? (product.priceCents / 100).toFixed(2) : ""
+  );
+  const [categoryId, setCategoryId] = useState(
+    product?.categoryId ?? categories[0]?.id ?? ""
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -361,7 +672,7 @@ function ProductForm({
     event.preventDefault();
     const priceCents = parsePriceToCents(price);
     if (!name.trim()) {
-      setError("Enter a name for the dish.");
+      setError("Give the dish a name.");
       return;
     }
     if (priceCents === null) {
@@ -374,297 +685,325 @@ function ProductForm({
     }
     setSaving(true);
     setError(null);
+    const fields = {
+      name: name.trim(),
+      description: optionalText(description),
+      priceCents,
+      categoryId
+    };
     try {
-      await createProduct({
-        name: name.trim(),
-        priceCents,
-        categoryId,
-        available: true
-      });
-      setName("");
-      setPrice("");
-      await onCreated();
+      if (product) {
+        await updateProduct(product.id, fields);
+      } else {
+        await createProduct({ ...fields, available: true });
+      }
     } catch (caught) {
       setError(errorMessage(caught));
-    } finally {
       setSaving(false);
+      return;
     }
+    await onSaved();
   }
 
   return (
-    <form
-      onSubmit={event => void submit(event)}
-      className="flex flex-wrap items-end gap-3"
+    <Modal
+      title={title}
+      onClose={onClose}
     >
-      <label className="flex flex-col text-sm">
-        Dish name
-        <input
-          value={name}
-          onChange={event => setName(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col text-sm">
-        Price (MXN)
-        <input
-          value={price}
-          inputMode="decimal"
-          onChange={event => setPrice(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col text-sm">
-        Category
-        <select
-          value={categoryId}
-          onChange={event => setCategoryId(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        >
-          {categories.map(category => (
-            <option
-              key={category.id}
-              value={category.id}
-            >
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-md bg-orange-700 px-4 py-2 text-white"
+      <form
+        aria-label={product ? "Edit dish" : "New dish"}
+        onSubmit={event => void submit(event)}
+        className="space-y-4"
       >
-        Add dish
-      </button>
-      {error && (
-        <p
-          role="alert"
-          className="w-full text-sm text-red-700"
-        >
-          {error}
-        </p>
-      )}
-    </form>
+        <label className="block text-sm font-medium">
+          Name
+          <input
+            value={name}
+            onChange={event => setName(event.target.value)}
+            className={FIELD}
+          />
+        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            Price (MXN)
+            <input
+              value={price}
+              inputMode="decimal"
+              placeholder="35.00"
+              onChange={event => setPrice(event.target.value)}
+              className={FIELD}
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Category
+            <select
+              value={categoryId}
+              onChange={event => setCategoryId(event.target.value)}
+              className={FIELD}
+            >
+              {categories.map(category => (
+                <option
+                  key={category.id}
+                  value={category.id}
+                >
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className="block text-sm font-medium">
+          Description{" "}
+          <span className="font-normal text-stone-500">(optional)</span>
+          <textarea
+            value={description}
+            rows={2}
+            onChange={event => setDescription(event.target.value)}
+            className={FIELD}
+          />
+        </label>
+        {error && (
+          <p
+            role="alert"
+            className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
+          >
+            {error}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl px-4 py-2.5 font-medium text-stone-600 hover:bg-stone-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-brand-700 disabled:bg-stone-300"
+          >
+            {saving ?
+              "Saving…"
+            : product ?
+              "Save changes"
+            : "Create dish"}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
-/** Text for an optional field: empty input means "no value" (null). */
-function optionalText(text: string): string | null {
-  const trimmed = text.trim();
-  return trimmed === "" ? null : trimmed;
-}
-
-function CategoryEditForm({
+function CategoryDialog({
+  title,
   category,
+  products,
+  categoryName,
+  onClose,
   onSaved,
-  onCancel
+  onMoveDish
 }: {
-  category: Category;
+  title: string;
+  category?: Category;
+  products?: Product[];
+  categoryName?: Map<string, string>;
+  onClose: () => void;
   onSaved: () => Promise<void>;
-  onCancel: () => void;
+  onMoveDish?: (product: Product) => Promise<unknown> | undefined;
 }) {
-  const [name, setName] = useState(category.name);
-  const [description, setDescription] = useState(category.description ?? "");
+  const [name, setName] = useState(category?.name ?? "");
+  const [description, setDescription] = useState(category?.description ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!name.trim()) {
-      setError("Enter a name for the category.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      await updateCategory(category.id, {
-        name: name.trim(),
-        description: optionalText(description)
-      });
-      await onSaved();
-    } catch (caught) {
-      setError(errorMessage(caught));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form
-      aria-label="Edit category"
-      onSubmit={event => void submit(event)}
-      className="flex flex-wrap items-end gap-3"
-    >
-      <label className="flex flex-col text-sm">
-        Category name
-        <input
-          value={name}
-          onChange={event => setName(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col text-sm">
-        Description
-        <input
-          value={description}
-          onChange={event => setDescription(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-md bg-orange-700 px-4 py-2 text-white"
-      >
-        Save
-      </button>
-      <button
-        type="button"
-        onClick={onCancel}
-        className="rounded-md border border-stone-300 px-4 py-2"
-      >
-        Cancel
-      </button>
-      {error && (
-        <p
-          role="alert"
-          className="w-full text-sm text-red-700"
-        >
-          {error}
-        </p>
-      )}
-    </form>
+  const [dishQuery, setDishQuery] = useState("");
+  const [dishFilter, setDishFilter] = useState<"all" | "outside" | "inside">(
+    "all"
   );
-}
-
-function ProductEditForm({
-  product,
-  categories,
-  onSaved,
-  onCancel
-}: {
-  product: Product;
-  categories: Category[];
-  onSaved: () => Promise<void>;
-  onCancel: () => void;
-}) {
-  const [name, setName] = useState(product.name);
-  const [description, setDescription] = useState(product.description ?? "");
-  const [price, setPrice] = useState((product.priceCents / 100).toFixed(2));
-  const [imageUrl, setImageUrl] = useState(product.imageUrl ?? "");
-  const [categoryId, setCategoryId] = useState(product.categoryId);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const priceCents = parsePriceToCents(price);
     if (!name.trim()) {
-      setError("Enter a name for the dish.");
-      return;
-    }
-    if (priceCents === null) {
-      setError("Enter a price in pesos, for example 35 or 35.50.");
+      setError("Give the category a name.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      await updateProduct(product.id, {
-        name: name.trim(),
-        description: optionalText(description),
-        priceCents,
-        imageUrl: optionalText(imageUrl),
-        categoryId
-      });
+      if (category) {
+        await updateCategory(category.id, {
+          name: name.trim(),
+          description: optionalText(description)
+        });
+      } else {
+        await createCategory({
+          name: name.trim(),
+          description: optionalText(description)
+        });
+      }
       await onSaved();
     } catch (caught) {
       setError(errorMessage(caught));
-    } finally {
       setSaving(false);
     }
   }
 
+  const search = dishQuery.trim().toLowerCase();
+  const dishes = (products ?? []).filter(
+    product =>
+      (search === "" || product.name.toLowerCase().includes(search)) &&
+      (dishFilter === "all" ||
+        (dishFilter === "inside" && product.categoryId === category?.id) ||
+        (dishFilter === "outside" && product.categoryId !== category?.id))
+  );
+
   return (
-    <form
-      aria-label="Edit dish"
-      onSubmit={event => void submit(event)}
-      className="flex flex-wrap items-end gap-3"
+    <Modal
+      title={title}
+      onClose={onClose}
     >
-      <label className="flex flex-col text-sm">
-        Dish name
-        <input
-          value={name}
-          onChange={event => setName(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col text-sm">
-        Description
-        <input
-          value={description}
-          onChange={event => setDescription(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col text-sm">
-        Price (MXN)
-        <input
-          value={price}
-          inputMode="decimal"
-          onChange={event => setPrice(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col text-sm">
-        Image URL
-        <input
-          value={imageUrl}
-          inputMode="url"
-          onChange={event => setImageUrl(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col text-sm">
-        Category
-        <select
-          value={categoryId}
-          onChange={event => setCategoryId(event.target.value)}
-          className="rounded-md border border-stone-300 px-3 py-2"
+      <form
+        aria-label={category ? "Edit category" : "New category"}
+        onSubmit={event => void submit(event)}
+        className="space-y-4"
+      >
+        <label className="block text-sm font-medium">
+          Name
+          <input
+            value={name}
+            placeholder="Drinks, Bowls, Desserts…"
+            onChange={event => setName(event.target.value)}
+            className={FIELD}
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          Description{" "}
+          <span className="font-normal text-stone-500">(optional)</span>
+          <input
+            value={description}
+            onChange={event => setDescription(event.target.value)}
+            className={FIELD}
+          />
+        </label>
+
+        {error && (
+          <p
+            role="alert"
+            className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
+          >
+            {error}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl px-4 py-2.5 font-medium text-stone-600 hover:bg-stone-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-brand-700 disabled:bg-stone-300"
+          >
+            {saving ?
+              "Saving…"
+            : category ?
+              "Save changes"
+            : "Create category"}
+          </button>
+        </div>
+      </form>
+
+      {category && products && onMoveDish && (
+        <section
+          aria-labelledby="category-dishes-heading"
+          className="mt-6 space-y-3 border-t border-stone-100 pt-5"
         >
-          {categories.map(category => (
-            <option
-              key={category.id}
-              value={category.id}
+          <div>
+            <h3
+              id="category-dishes-heading"
+              className="font-semibold"
             >
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-md bg-orange-700 px-4 py-2 text-white"
-      >
-        Save
-      </button>
-      <button
-        type="button"
-        onClick={onCancel}
-        className="rounded-md border border-stone-300 px-4 py-2"
-      >
-        Cancel
-      </button>
-      {error && (
-        <p
-          role="alert"
-          className="w-full text-sm text-red-700"
-        >
-          {error}
-        </p>
+              Dishes in {category.name}
+            </h3>
+            <p className="text-sm text-stone-500">
+              Add dishes that belong here. Each dish moves out of its current
+              category.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <label className="flex-1">
+              <span className="sr-only">Search dishes</span>
+              <input
+                type="search"
+                value={dishQuery}
+                onChange={event => setDishQuery(event.target.value)}
+                placeholder="Search a dish"
+                className={FIELD}
+              />
+            </label>
+            <label className="sm:w-48">
+              <span className="sr-only">Show dishes</span>
+              <select
+                value={dishFilter}
+                onChange={event =>
+                  setDishFilter(
+                    event.target.value as "all" | "outside" | "inside"
+                  )
+                }
+                className={FIELD}
+              >
+                <option value="all">All dishes</option>
+                <option value="outside">Not in {category.name}</option>
+                <option value="inside">In {category.name}</option>
+              </select>
+            </label>
+          </div>
+
+          {dishes.length === 0 ?
+            <p className="rounded-xl bg-stone-50 p-4 text-center text-sm text-stone-600">
+              No dishes match.
+            </p>
+          : <ul className="max-h-64 divide-y divide-stone-100 overflow-y-auto rounded-xl border border-stone-100">
+              {dishes.map(product => {
+                const inside = product.categoryId === category.id;
+                return (
+                  <li
+                    key={product.id}
+                    className="flex items-center justify-between gap-3 px-3 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {product.name}
+                      </p>
+                      <p className="text-xs text-stone-500">
+                        {categoryName?.get(product.categoryId) ?? "No category"}
+                      </p>
+                    </div>
+                    {inside ?
+                      <span className="flex-none rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-800 ring-1 ring-brand-200">
+                        In this category
+                      </span>
+                    : <button
+                        type="button"
+                        onClick={() => void onMoveDish(product)}
+                        className="flex-none rounded-xl bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-800 hover:bg-stone-200"
+                      >
+                        Add here
+                      </button>
+                    }
+                  </li>
+                );
+              })}
+            </ul>
+          }
+        </section>
       )}
-    </form>
+    </Modal>
   );
 }

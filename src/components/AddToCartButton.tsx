@@ -1,67 +1,42 @@
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useState, type ReactNode } from "react";
 import { useAuth } from "../auth/useAuth";
-import { useCart } from "../cart/useCart";
-import { cartErrorMessage } from "../lib/errors";
+import type { Product } from "../types/menu";
+import { AddToCartDialog } from "./AddToCartDialog";
+import { SignInDialog } from "./SignInDialog";
 
-type AddToCartButtonProps = {
-  productId: string;
-  available: boolean;
+type AddToCartFlowProps = {
+  product: Product;
+  /** Renders whatever should start the flow, such as a button or the dish card. */
+  children: (start: () => void) => ReactNode;
+  className?: string;
 };
 
-/** Adds one unit through POST /cart/items. Anonymous visitors go to sign in first. */
-export function AddToCartButton({
-  productId,
-  available
-}: AddToCartButtonProps) {
+/**
+ * The add-to-cart flow for one dish: anonymous visitors get a sign-in pop-up first,
+ * then the dish pop-up opens. Any element passed as children can start it.
+ */
+export function AddToCartFlow({
+  product,
+  children,
+  className = "flex flex-col items-end gap-1"
+}: AddToCartFlowProps) {
   const { isAuthenticated } = useAuth();
-  const { addItem } = useCart();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [pending, setPending] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const [added, setAdded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  if (!available) {
-    return (
-      <button
-        type="button"
-        disabled
-        className="rounded-md bg-stone-300 px-3 py-1.5 text-sm font-medium text-stone-600"
-      >
-        Unavailable
-      </button>
-    );
-  }
-
-  async function handleClick() {
-    if (!isAuthenticated) {
-      void navigate("/login", { state: { from: location.pathname } });
-      return;
-    }
-    setPending(true);
+  function start() {
     setAdded(false);
-    setError(null);
-    try {
-      await addItem(productId);
-      setAdded(true);
-    } catch (caught) {
-      setError(cartErrorMessage(caught));
-    } finally {
-      setPending(false);
+    if (isAuthenticated) {
+      setOpen(true);
+    } else {
+      setSigningIn(true);
     }
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => void handleClick()}
-        className="rounded-md bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700 disabled:bg-stone-300 disabled:text-stone-600"
-      >
-        {pending ? "Adding…" : "Add to cart"}
-      </button>
+    <div className={className}>
+      {children(start)}
       {added && (
         <p
           role="status"
@@ -70,14 +45,55 @@ export function AddToCartButton({
           Added to your cart
         </p>
       )}
-      {error && (
-        <p
-          role="alert"
-          className="max-w-48 text-right text-xs text-red-700"
-        >
-          {error}
-        </p>
+      {signingIn && (
+        <SignInDialog
+          onClose={() => setSigningIn(false)}
+          onSignedIn={() => {
+            setSigningIn(false);
+            setOpen(true);
+          }}
+        />
+      )}
+      {open && (
+        <AddToCartDialog
+          product={product}
+          onClose={() => setOpen(false)}
+          onAdded={() => setAdded(true)}
+        />
       )}
     </div>
+  );
+}
+
+type AddToCartButtonProps = {
+  product: Product;
+};
+
+/** The "Add to cart" button. Unavailable dishes show a disabled button instead. */
+export function AddToCartButton({ product }: AddToCartButtonProps) {
+  if (!product.available) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="rounded-xl bg-stone-200 px-3 py-1.5 text-sm font-medium text-stone-600"
+      >
+        Unavailable
+      </button>
+    );
+  }
+
+  return (
+    <AddToCartFlow product={product}>
+      {start => (
+        <button
+          type="button"
+          onClick={start}
+          className="rounded-xl bg-brand-600 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-white shadow-sm hover:bg-brand-700"
+        >
+          Add to cart
+        </button>
+      )}
+    </AddToCartFlow>
   );
 }

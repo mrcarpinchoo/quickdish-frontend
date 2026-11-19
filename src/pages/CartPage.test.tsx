@@ -162,26 +162,24 @@ describe("CartPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("sends the order notes and opens the order confirmation", async () => {
+  it("places the order and opens the order confirmation", async () => {
     const user = userEvent.setup();
     vi.mocked(createOrder).mockResolvedValue({
       id: "order-9",
       userId: "user-1",
       status: "PENDING",
       totalCents: 11000,
-      notes: "para llevar",
+      notes: null,
       createdAt: "2026-11-15T10:00:00.000Z",
       items: []
     });
     renderCart();
 
-    await user.type(
-      await screen.findByLabelText("Notes for the kitchen (optional)"),
-      "para llevar"
+    await user.click(
+      await screen.findByRole("button", { name: "Place order" })
     );
-    await user.click(screen.getByRole("button", { name: "Place order" }));
 
-    expect(createOrder).toHaveBeenCalledWith("para llevar");
+    expect(createOrder).toHaveBeenCalledWith("");
     expect(
       await screen.findByRole("heading", { name: "Order destination" })
     ).toBeInTheDocument();

@@ -1,1 +1,23 @@
 @import "tailwindcss";
+
+/* Zesto-inspired palette: deep green as the main brand color, mustard as the warm accent. */
+@theme {
+    --color-brand-50: #f1f8f3;
+    --color-brand-100: #dfeee5;
+    --color-brand-200: #bfdccb;
+    --color-brand-300: #93c3a5;
+    --color-brand-400: #4f9473;
+    --color-brand-500: #2e7257;
+    --color-brand-600: #1f5a43;
+    --color-brand-700: #184835;
+    --color-brand-800: #123827;
+    --color-brand-900: #0c2a1d;
+
+    --color-sun-50: #fefbee;
+    --color-sun-100: #fdf0c6;
+    --color-sun-300: #fad873;
+    --color-sun-400: #f6c343;
+    --color-sun-500: #eeae2c;
+    --color-sun-800: #8f6a0c;
+    --color-sun-900: #6b4f08;
+}

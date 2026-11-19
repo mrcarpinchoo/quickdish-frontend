@@ -52,6 +52,13 @@ function renderPage() {
   });
 }
 
+/** Opens a dialog and returns it, so its fields can be found inside it. */
+async function openDialog(button: string) {
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: button }));
+  return { user, dialog: await screen.findByRole("dialog") };
+}
+
 describe("AdminMenuPage", () => {
   beforeEach(() => {
     vi.mocked(listAllCategories).mockResolvedValue([bebidas]);
@@ -63,174 +70,183 @@ describe("AdminMenuPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("lists every category and dish, including inactive ones", async () => {
+  it("shows each dish with its category and price, and counts the tabs", async () => {
     renderPage();
-
-    expect(await screen.findByText("Tacos al pastor")).toBeInTheDocument();
-    const categories = screen.getByRole("region", { name: "Categories" });
-    expect(within(categories).getByText("Bebidas")).toBeInTheDocument();
-    expect(listAllCategories).toHaveBeenCalled();
-    expect(listAllProducts).toHaveBeenCalled();
-  });
-
-  it("creates a category and reloads the list", async () => {
-    const user = userEvent.setup();
-    vi.mocked(createCategory).mockResolvedValue({
-      ...bebidas,
-      id: "cat-2",
-      name: "Postres"
-    });
-    renderPage();
-    await screen.findByText("Tacos al pastor");
-
-    await user.type(screen.getByLabelText("Category name"), "Postres");
-    await user.click(screen.getByRole("button", { name: "Add category" }));
-
-    await waitFor(() =>
-      expect(createCategory).toHaveBeenCalledWith({ name: "Postres" })
-    );
-    expect(listAllCategories).toHaveBeenCalledTimes(2);
-  });
-
-  it("creates a dish with the price converted to cents", async () => {
-    const user = userEvent.setup();
-    vi.mocked(createProduct).mockResolvedValue(tacos);
-    renderPage();
-    await screen.findByText("Tacos al pastor");
-
-    await user.type(screen.getByLabelText("Dish name"), "Café de olla");
-    await user.type(screen.getByLabelText("Price (MXN)"), "35.50");
-    await user.click(screen.getByRole("button", { name: "Add dish" }));
-
-    await waitFor(() =>
-      expect(createProduct).toHaveBeenCalledWith({
-        name: "Café de olla",
-        priceCents: 3550,
-        categoryId: "cat-1",
-        available: true
-      })
-    );
-  });
-
-  it("rejects a price that is not a positive amount in pesos", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    await screen.findByText("Tacos al pastor");
-
-    await user.type(screen.getByLabelText("Dish name"), "Agua");
-    await user.type(screen.getByLabelText("Price (MXN)"), "abc");
-    await user.click(screen.getByRole("button", { name: "Add dish" }));
 
     expect(
-      await screen.findByText(
-        "Enter a price in pesos, for example 35 or 35.50."
-      )
+      await screen.findByRole("heading", { name: "Tacos al pastor" })
     ).toBeInTheDocument();
+    expect(screen.getAllByText("Bebidas").length).toBeGreaterThan(0);
+    expect(screen.getByText("MX$35.00")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Dishes (1)" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Categories (1)" })
+    ).toBeInTheDocument();
+  });
+
+  it("creates a dish from the New dish pop-up with the price in cents", async () => {
+    vi.mocked(createProduct).mockResolvedValue(tacos);
+    renderPage();
+
+    const { user, dialog } = await openDialog("+ New dish");
+    await user.type(within(dialog).getByLabelText("Name"), "Quesadilla");
+    await user.type(within(dialog).getByLabelText("Price (MXN)"), "42.50");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create dish" })
+    );
+
+    await waitFor(() =>
+      expect(createProduct).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Quesadilla",
+          priceCents: 4250,
+          categoryId: "cat-1",
+          available: true
+        })
+      )
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Dish created."
+    );
+  });
+
+  it("explains a price that is not a positive amount, without calling the API", async () => {
+    renderPage();
+
+    const { user, dialog } = await openDialog("+ New dish");
+    await user.type(within(dialog).getByLabelText("Name"), "Agua");
+    await user.type(within(dialog).getByLabelText("Price (MXN)"), "abc");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create dish" })
+    );
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Enter a price in pesos"
+    );
     expect(createProduct).not.toHaveBeenCalled();
   });
 
-  it("marks a dish unavailable", async () => {
-    const user = userEvent.setup();
+  it("marks a dish sold out with one click", async () => {
     vi.mocked(setProductAvailability).mockResolvedValue({
       ...tacos,
       available: false
     });
+    const user = userEvent.setup();
     renderPage();
-    const row = (await screen.findByText("Tacos al pastor")).closest("li");
-    expect(row).not.toBeNull();
 
     await user.click(
-      within(row!).getByRole("button", { name: "Mark unavailable" })
+      await screen.findByRole("button", { name: "Mark sold out" })
     );
 
     expect(setProductAvailability).toHaveBeenCalledWith("prod-1", false);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Tacos al pastor is now hidden from customers."
+    );
   });
 
-  it("deactivates a category after confirmation", async () => {
+  it("shows the API's message when a change fails", async () => {
+    vi.mocked(setProductAvailability).mockRejectedValue(
+      new ApiError(500, "SERVER_ERROR", "Could not save the change")
+    );
     const user = userEvent.setup();
-    vi.mocked(updateCategory).mockResolvedValue({ ...bebidas, active: false });
     renderPage();
-    await screen.findByText("Tacos al pastor");
 
-    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Mark sold out" })
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Could not save the change"
+    );
+  });
+
+  it("edits a dish and sends the new price in cents", async () => {
+    vi.mocked(updateProduct).mockResolvedValue(tacos);
+    renderPage();
+
+    const { user, dialog } = await openDialog("Edit");
+    const price = within(dialog).getByLabelText("Price (MXN)");
+    await user.clear(price);
+    await user.type(price, "40");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Save changes" })
+    );
+
+    await waitFor(() =>
+      expect(updateProduct).toHaveBeenCalledWith(
+        "prod-1",
+        expect.objectContaining({ priceCents: 4000 })
+      )
+    );
+  });
+
+  it("creates a category from the New category pop-up", async () => {
+    vi.mocked(createCategory).mockResolvedValue({
+      id: "cat-2",
+      name: "Postres",
+      description: null,
+      active: true
+    });
+    renderPage();
+
+    const { user, dialog } = await openDialog("+ New category");
+    await user.type(within(dialog).getByLabelText("Name"), "Postres");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create category" })
+    );
+
+    await waitFor(() =>
+      expect(createCategory).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Postres" })
+      )
+    );
+  });
+
+  it("hides a category from the menu when asked", async () => {
+    vi.mocked(updateCategory).mockResolvedValue({ ...bebidas, active: false });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole("tab", { name: "Categories (1)" })
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Hide from menu" })
+    );
 
     expect(updateCategory).toHaveBeenCalledWith("cat-1", { active: false });
   });
 
-  it("does not delete a dish when the confirmation is cancelled", async () => {
+  it("moves a dish into a category from the category pop-up", async () => {
+    vi.mocked(listAllCategories).mockResolvedValue([
+      bebidas,
+      { id: "cat-2", name: "Tacos", description: null, active: true }
+    ]);
+    vi.mocked(updateProduct).mockResolvedValue(tacos);
     const user = userEvent.setup();
-    vi.stubGlobal(
-      "confirm",
-      vi.fn(() => false)
-    );
     renderPage();
-    await screen.findByText("Tacos al pastor");
-
-    const row = screen.getByText("Tacos al pastor").closest("li");
-    await user.click(within(row!).getByRole("button", { name: "Delete" }));
-
-    expect(deleteProduct).not.toHaveBeenCalled();
-  });
-
-  it("shows the API's message when a change fails", async () => {
-    const user = userEvent.setup();
-    vi.mocked(setProductAvailability).mockRejectedValue(
-      new ApiError(409, "PRODUCT_IN_USE", "This dish is in an open order.")
-    );
-    renderPage();
-    const row = (await screen.findByText("Tacos al pastor")).closest("li");
 
     await user.click(
-      within(row!).getByRole("button", { name: "Mark unavailable" })
+      await screen.findByRole("tab", { name: "Categories (2)" })
     );
-
-    expect(
-      await screen.findByText("This dish is in an open order.")
-    ).toBeInTheDocument();
-  });
-  it("edits a dish and sends the new price in cents", async () => {
-    const user = userEvent.setup();
-    vi.mocked(updateProduct).mockResolvedValue({ ...tacos, priceCents: 4000 });
-    renderPage();
-    const row = (await screen.findByText("Tacos al pastor")).closest("li");
-
-    await user.click(within(row!).getByRole("button", { name: "Edit" }));
-    const form = screen.getByRole("form", { name: "Edit dish" });
-    const price = within(form).getByLabelText("Price (MXN)");
-    await user.clear(price);
-    await user.type(price, "40");
-    await user.click(within(form).getByRole("button", { name: "Save" }));
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Add here" }));
 
     await waitFor(() =>
       expect(updateProduct).toHaveBeenCalledWith("prod-1", {
-        name: "Tacos al pastor",
-        description: null,
-        priceCents: 4000,
-        imageUrl: null,
-        categoryId: "cat-1"
+        categoryId: "cat-2"
       })
     );
   });
 
-  it("renames a category", async () => {
+  it("does not delete a dish when the confirmation is cancelled", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
     const user = userEvent.setup();
-    vi.mocked(updateCategory).mockResolvedValue({ ...bebidas, name: "Aguas" });
     renderPage();
-    await screen.findByText("Tacos al pastor");
 
-    const categories = screen.getByRole("region", { name: "Categories" });
-    await user.click(within(categories).getByRole("button", { name: "Edit" }));
-    const form = screen.getByRole("form", { name: "Edit category" });
-    const name = within(form).getByLabelText("Category name");
-    await user.clear(name);
-    await user.type(name, "Aguas");
-    await user.click(within(form).getByRole("button", { name: "Save" }));
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
 
-    await waitFor(() =>
-      expect(updateCategory).toHaveBeenCalledWith("cat-1", {
-        name: "Aguas",
-        description: null
-      })
-    );
+    expect(deleteProduct).not.toHaveBeenCalled();
   });
 });

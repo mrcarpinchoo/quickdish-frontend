@@ -25,7 +25,7 @@ export function OrdersPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">My orders</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">My orders</h1>
 
       {error && (
         <p
@@ -44,8 +44,8 @@ export function OrdersPage() {
         <p className="text-stone-600">
           You have no orders yet.{" "}
           <Link
-            to="/"
-            className="text-orange-700 underline"
+            to="/menu"
+            className="font-medium text-brand-700 hover:underline"
           >
             Browse the menu
           </Link>
@@ -53,12 +53,12 @@ export function OrdersPage() {
       )}
 
       {orders && orders.length > 0 && (
-        <ul className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
+        <ul className="space-y-3">
           {orders.map(order => (
             <li key={order.id}>
               <Link
                 to={`/orders/${order.id}`}
-                className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-stone-50"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-100 transition-shadow hover:shadow-md"
               >
                 <div className="space-y-1">
                   <p className="font-medium">
