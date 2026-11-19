@@ -1,7 +1,9 @@
+import { appConfig } from "./config";
+
 /**
  * Local photos for the menu, served from public/menu/. They take precedence
- * over the imageUrl the API returns (placeholders today). Keyed by product id,
- * so a renamed product must be updated here as well.
+ * over the imageUrl the API returns. Keyed by product id, so a renamed product
+ * must be updated here as well. Remove an entry once its photo is uploaded.
  */
 const localImages: Record<string, string> = {
   "3c9e7a10-0002-4f2b-8e5a-000000000001": "/menu/pastor.jpg",
@@ -17,9 +19,18 @@ const localImages: Record<string, string> = {
   "3c9e7a10-0002-4f2b-8e5a-000000000012": "/menu/tres-leches.jpg"
 };
 
+/**
+ * Photo of a dish. An uploaded photo comes from the API as a path such as
+ * `/products/<id>/image?v=1`, so it is joined to the API address.
+ */
 export function productImageUrl(product: {
   id: string;
   imageUrl: string | null;
 }): string | null {
-  return localImages[product.id] ?? product.imageUrl;
+  const local = localImages[product.id];
+  if (local) return local;
+  if (product.imageUrl?.startsWith("/")) {
+    return `${appConfig().apiUrl}${product.imageUrl}`;
+  }
+  return product.imageUrl;
 }

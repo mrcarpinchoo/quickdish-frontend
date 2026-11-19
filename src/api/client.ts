@@ -5,6 +5,8 @@ type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type RequestOptions = {
   method?: Method;
   body?: unknown;
+  /** Sent as the raw request body with its own Content-Type (for photo uploads). */
+  rawBody?: Blob;
 };
 
 type ErrorBody = {
@@ -57,7 +59,9 @@ export async function apiRequest<T>(
   options: RequestOptions = {}
 ): Promise<T> {
   const headers = new Headers({ Accept: "application/json" });
-  if (options.body !== undefined) {
+  if (options.rawBody) {
+    headers.set("Content-Type", options.rawBody.type);
+  } else if (options.body !== undefined) {
     headers.set("Content-Type", "application/json");
   }
   if (authToken) {
@@ -67,7 +71,9 @@ export async function apiRequest<T>(
   const response = await fetch(`${appConfig().apiUrl}${path}`, {
     method: options.method ?? "GET",
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body)
+    body:
+      options.rawBody ??
+      (options.body === undefined ? undefined : JSON.stringify(options.body))
   });
 
   if (response.status === 204) {

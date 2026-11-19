@@ -1,6 +1,7 @@
 import {
   useEffect,
   useId,
+  useMemo,
   useState,
   type FormEvent,
   type ReactNode
@@ -12,13 +13,15 @@ import {
   deleteProduct,
   listAllCategories,
   listAllProducts,
+  removeProductPhoto,
   setProductAvailability,
   updateCategory,
-  updateProduct
+  updateProduct,
+  uploadProductPhoto
 } from "../api/admin-menu";
 import { errorMessage } from "../lib/errors";
+import { shrinkDishPhoto } from "../lib/image-upload";
 import { productImageUrl } from "../lib/menu-images";
-import { readDishPhoto } from "../lib/image-upload";
 import { formatCents } from "../lib/money";
 import type { Category, Product } from "../types/menu";
 
@@ -671,7 +674,21 @@ function ProductDialog({
   const [price, setPrice] = useState(
     product ? (product.priceCents / 100).toFixed(2) : ""
   );
-  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
+  /** A photo the admin picked, not uploaded yet. */
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  /** Set when the admin clicks "Remove photo" on a dish that has one. */
+  const [removePhoto, setRemovePhoto] = useState(false);
+  const previewUrl = useMemo(
+    () => (photo ? URL.createObjectURL(photo) : null),
+    [photo]
+  );
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+  const savedImage = product ? productImageUrl(product) : null;
+  const shownImage = previewUrl ?? (removePhoto ? null : savedImage);
   const [categoryId, setCategoryId] = useState(
     product?.categoryId ?? categories[0]?.id ?? ""
   );
@@ -695,30 +712,39 @@ function ProductDialog({
     }
     setSaving(true);
     setError(null);
+    const fields = {
+      name: name.trim(),
+      description: optionalText(description),
+      priceCents,
+      categoryId
+    };
+    let saved: Product;
     try {
-      if (product) {
-        await updateProduct(product.id, {
-          name: name.trim(),
-          description: optionalText(description),
-          priceCents,
-          imageUrl: optionalText(imageUrl),
-          categoryId
-        });
-      } else {
-        await createProduct({
-          name: name.trim(),
-          description: optionalText(description),
-          priceCents,
-          imageUrl: optionalText(imageUrl),
-          categoryId,
-          available: true
-        });
-      }
-      await onSaved();
+      saved =
+        product ?
+          await updateProduct(product.id, fields)
+        : await createProduct({ ...fields, available: true });
     } catch (caught) {
       setError(errorMessage(caught));
       setSaving(false);
+      return;
     }
+
+    try {
+      if (photo) {
+        await uploadProductPhoto(saved.id, photo);
+      } else if (removePhoto && product?.imageUrl) {
+        await removeProductPhoto(saved.id);
+      }
+    } catch (caught) {
+      // The dish itself is saved; only the photo failed.
+      setError(
+        `The dish was saved, but its photo was not: ${errorMessage(caught)} Close this and edit the dish to try the photo again.`
+      );
+      setSaving(false);
+      return;
+    }
+    await onSaved();
   }
 
   return (
@@ -781,9 +807,9 @@ function ProductDialog({
         <div className="space-y-2">
           <p className="text-sm font-medium">Photo</p>
           <div className="flex items-center gap-4 rounded-xl border border-dashed border-stone-300 bg-stone-50 p-3">
-            {imageUrl ?
+            {shownImage ?
               <img
-                src={imageUrl}
+                src={shownImage}
                 alt=""
                 className="h-20 w-20 flex-none rounded-xl object-cover"
               />
@@ -796,7 +822,7 @@ function ProductDialog({
             }
             <div className="min-w-0 flex-1 space-y-2">
               <label className="inline-flex cursor-pointer items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-stone-800 ring-1 ring-stone-200 hover:bg-stone-100">
-                {imageUrl ? "Replace photo" : "Upload photo"}
+                {shownImage ? "Replace photo" : "Upload photo"}
                 <input
                   type="file"
                   accept="image/*"
@@ -805,18 +831,24 @@ function ProductDialog({
                     const file = event.target.files?.[0];
                     event.target.value = "";
                     if (!file) return;
-                    readDishPhoto(file)
-                      .then(setImageUrl)
+                    shrinkDishPhoto(file)
+                      .then(shrunk => {
+                        setPhoto(shrunk);
+                        setRemovePhoto(false);
+                      })
                       .catch((caught: unknown) =>
                         setError(errorMessage(caught))
                       );
                   }}
                 />
               </label>
-              {imageUrl && (
+              {shownImage && (
                 <button
                   type="button"
-                  onClick={() => setImageUrl("")}
+                  onClick={() => {
+                    setPhoto(null);
+                    setRemovePhoto(true);
+                  }}
                   className="ml-2 text-sm font-medium text-red-600 hover:underline"
                 >
                   Remove photo

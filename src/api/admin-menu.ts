@@ -67,3 +67,18 @@ export function deleteProduct(id: string) {
     method: "DELETE"
   });
 }
+
+/** Uploads a dish photo (JPG, PNG or WebP, 1 MB max). Returns the updated dish. */
+export function uploadProductPhoto(id: string, photo: Blob) {
+  return apiRequest<Product>(`/products/${encodeURIComponent(id)}/image`, {
+    method: "PUT",
+    rawBody: photo
+  });
+}
+
+/** Removes a dish photo. Returns the updated dish. */
+export function removeProductPhoto(id: string) {
+  return apiRequest<Product>(`/products/${encodeURIComponent(id)}/image`, {
+    method: "DELETE"
+  });
+}

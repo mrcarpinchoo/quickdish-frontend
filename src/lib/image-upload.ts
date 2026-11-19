@@ -1,13 +1,13 @@
-/** Largest side, in pixels, of a dish photo stored with the menu. */
+/** Largest side, in pixels, of a dish photo sent to the API. */
 const MAX_SIDE = 800;
 /** JPEG quality: a good balance between size and look. */
 const QUALITY = 0.82;
 
 /**
- * Reads a photo chosen by the admin, shrinks it to fit MAX_SIDE and returns it as
- * a JPEG data URL. Shrinking keeps the stored text small.
+ * Reads a photo chosen by the admin, shrinks it to fit MAX_SIDE and returns a
+ * JPEG file ready to upload. Shrinking keeps uploads small (about 100 KB).
  */
-export function readDishPhoto(file: File): Promise<string> {
+export function shrinkDishPhoto(file: File): Promise<Blob> {
   if (!file.type.startsWith("image/")) {
     return Promise.reject(
       new Error("Choose an image file, such as JPG or PNG.")
@@ -31,7 +31,14 @@ export function readDishPhoto(file: File): Promise<string> {
       context.fillStyle = "#ffffff";
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", QUALITY));
+      canvas.toBlob(
+        blob =>
+          blob ?
+            resolve(blob)
+          : reject(new Error("This browser could not prepare the photo.")),
+        "image/jpeg",
+        QUALITY
+      );
     };
     image.onerror = () => {
       URL.revokeObjectURL(url);
