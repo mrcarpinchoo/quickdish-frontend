@@ -2,7 +2,6 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import { useCart } from "../cart/useCart";
 import { cartErrorMessage } from "../lib/errors";
 import { formatCents } from "../lib/money";
-import { productImageUrl } from "../lib/menu-images";
 import { MAX_QUANTITY } from "../types/cart";
 import type { Product } from "../types/menu";
 
@@ -23,7 +22,6 @@ export function AddToCartDialog({
   const [quantity, setQuantity] = useState(1);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const image = productImageUrl(product);
 
   // Escape closes the pop-up, and the page behind it stops scrolling while it is open.
   useEffect(() => {
@@ -91,13 +89,6 @@ export function AddToCartDialog({
         </div>
 
         <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4">
-          {image && (
-            <img
-              src={image}
-              alt=""
-              className="h-48 w-full rounded-2xl object-cover sm:h-56"
-            />
-          )}
           {product.description && (
             <p className="text-sm text-stone-600">{product.description}</p>
           )}

@@ -6,7 +6,7 @@ import { SignInDialog } from "./SignInDialog";
 
 type AddToCartFlowProps = {
   product: Product;
-  /** Renders whatever should start the flow, such as a button or the dish photo. */
+  /** Renders whatever should start the flow, such as a button or the dish card. */
   children: (start: () => void) => ReactNode;
   className?: string;
 };

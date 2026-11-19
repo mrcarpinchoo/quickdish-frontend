@@ -1,7 +1,6 @@
 import {
   useEffect,
   useId,
-  useMemo,
   useState,
   type FormEvent,
   type ReactNode
@@ -13,15 +12,11 @@ import {
   deleteProduct,
   listAllCategories,
   listAllProducts,
-  removeProductPhoto,
   setProductAvailability,
   updateCategory,
-  updateProduct,
-  uploadProductPhoto
+  updateProduct
 } from "../api/admin-menu";
 import { errorMessage } from "../lib/errors";
-import { shrinkDishPhoto } from "../lib/image-upload";
-import { productImageUrl } from "../lib/menu-images";
 import { formatCents } from "../lib/money";
 import type { Category, Product } from "../types/menu";
 
@@ -327,19 +322,12 @@ export function AdminMenuPage() {
                     className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-100"
                   >
                     <div className="flex gap-4">
-                      {productImageUrl(product) ?
-                        <img
-                          src={productImageUrl(product) ?? undefined}
-                          alt=""
-                          className="h-20 w-20 flex-none rounded-xl object-cover"
-                        />
-                      : <div
-                          aria-hidden="true"
-                          className="flex h-20 w-20 flex-none items-center justify-center rounded-xl bg-stone-100 text-2xl text-stone-400"
-                        >
-                          {product.name.charAt(0)}
-                        </div>
-                      }
+                      <div
+                        aria-hidden="true"
+                        className="flex h-20 w-20 flex-none items-center justify-center rounded-xl bg-stone-100 text-2xl text-stone-400"
+                      >
+                        {product.name.charAt(0)}
+                      </div>
                       <div className="min-w-0 flex-1 space-y-1">
                         <h2 className="truncate font-semibold">
                           {product.name}
@@ -674,21 +662,6 @@ function ProductDialog({
   const [price, setPrice] = useState(
     product ? (product.priceCents / 100).toFixed(2) : ""
   );
-  /** A photo the admin picked, not uploaded yet. */
-  const [photo, setPhoto] = useState<Blob | null>(null);
-  /** Set when the admin clicks "Remove photo" on a dish that has one. */
-  const [removePhoto, setRemovePhoto] = useState(false);
-  const previewUrl = useMemo(
-    () => (photo ? URL.createObjectURL(photo) : null),
-    [photo]
-  );
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-  const savedImage = product ? productImageUrl(product) : null;
-  const shownImage = previewUrl ?? (removePhoto ? null : savedImage);
   const [categoryId, setCategoryId] = useState(
     product?.categoryId ?? categories[0]?.id ?? ""
   );
@@ -718,29 +691,14 @@ function ProductDialog({
       priceCents,
       categoryId
     };
-    let saved: Product;
     try {
-      saved =
-        product ?
-          await updateProduct(product.id, fields)
-        : await createProduct({ ...fields, available: true });
-    } catch (caught) {
-      setError(errorMessage(caught));
-      setSaving(false);
-      return;
-    }
-
-    try {
-      if (photo) {
-        await uploadProductPhoto(saved.id, photo);
-      } else if (removePhoto && product?.imageUrl) {
-        await removeProductPhoto(saved.id);
+      if (product) {
+        await updateProduct(product.id, fields);
+      } else {
+        await createProduct({ ...fields, available: true });
       }
     } catch (caught) {
-      // The dish itself is saved; only the photo failed.
-      setError(
-        `The dish was saved, but its photo was not: ${errorMessage(caught)} Close this and edit the dish to try the photo again.`
-      );
+      setError(errorMessage(caught));
       setSaving(false);
       return;
     }
@@ -804,62 +762,6 @@ function ProductDialog({
             className={FIELD}
           />
         </label>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Photo</p>
-          <div className="flex items-center gap-4 rounded-xl border border-dashed border-stone-300 bg-stone-50 p-3">
-            {shownImage ?
-              <img
-                src={shownImage}
-                alt=""
-                className="h-20 w-20 flex-none rounded-xl object-cover"
-              />
-            : <div
-                aria-hidden="true"
-                className="flex h-20 w-20 flex-none items-center justify-center rounded-xl bg-white text-2xl text-stone-400 ring-1 ring-stone-200"
-              >
-                {name.trim().charAt(0) || "?"}
-              </div>
-            }
-            <div className="min-w-0 flex-1 space-y-2">
-              <label className="inline-flex cursor-pointer items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-stone-800 ring-1 ring-stone-200 hover:bg-stone-100">
-                {shownImage ? "Replace photo" : "Upload photo"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={event => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    if (!file) return;
-                    shrinkDishPhoto(file)
-                      .then(shrunk => {
-                        setPhoto(shrunk);
-                        setRemovePhoto(false);
-                      })
-                      .catch((caught: unknown) =>
-                        setError(errorMessage(caught))
-                      );
-                  }}
-                />
-              </label>
-              {shownImage && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPhoto(null);
-                    setRemovePhoto(true);
-                  }}
-                  className="ml-2 text-sm font-medium text-red-600 hover:underline"
-                >
-                  Remove photo
-                </button>
-              )}
-              <p className="text-xs text-stone-500">
-                JPG or PNG. We shrink it for you.
-              </p>
-            </div>
-          </div>
-        </div>
         {error && (
           <p
             role="alert"

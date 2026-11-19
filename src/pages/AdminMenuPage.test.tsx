@@ -9,11 +9,9 @@ import {
   listAllProducts,
   setProductAvailability,
   updateCategory,
-  updateProduct,
-  uploadProductPhoto
+  updateProduct
 } from "../api/admin-menu";
 import { ApiError } from "../api/client";
-import { shrinkDishPhoto } from "../lib/image-upload";
 import { renderWithProviders } from "../test/render";
 import type { Category, Product } from "../types/menu";
 import { AdminMenuPage } from "./AdminMenuPage";
@@ -27,13 +25,7 @@ vi.mock("../api/admin-menu", () => ({
   deleteCategory: vi.fn(),
   createProduct: vi.fn(),
   setProductAvailability: vi.fn(),
-  deleteProduct: vi.fn(),
-  uploadProductPhoto: vi.fn(),
-  removeProductPhoto: vi.fn()
-}));
-
-vi.mock("../lib/image-upload", () => ({
-  shrinkDishPhoto: vi.fn()
+  deleteProduct: vi.fn()
 }));
 
 const bebidas: Category = {
@@ -115,59 +107,6 @@ describe("AdminMenuPage", () => {
     );
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Dish created."
-    );
-  });
-
-  it("uploads the chosen photo after the dish is created", async () => {
-    const shrunk = new Blob(["jpeg"], { type: "image/jpeg" });
-    vi.mocked(shrinkDishPhoto).mockResolvedValue(shrunk);
-    vi.mocked(createProduct).mockResolvedValue({ ...tacos, id: "prod-2" });
-    vi.mocked(uploadProductPhoto).mockResolvedValue({ ...tacos, id: "prod-2" });
-    renderPage();
-
-    const { user, dialog } = await openDialog("+ New dish");
-    await user.type(within(dialog).getByLabelText("Name"), "Quesadilla");
-    await user.type(within(dialog).getByLabelText("Price (MXN)"), "42");
-    await user.upload(
-      within(dialog).getByLabelText("Upload photo"),
-      new File(["raw"], "quesadilla.jpg", { type: "image/jpeg" })
-    );
-    await user.click(
-      within(dialog).getByRole("button", { name: "Create dish" })
-    );
-
-    await waitFor(() =>
-      expect(uploadProductPhoto).toHaveBeenCalledWith("prod-2", shrunk)
-    );
-  });
-
-  it("keeps the dish and explains the problem when the photo upload fails", async () => {
-    vi.mocked(createProduct).mockResolvedValue({ ...tacos, id: "prod-2" });
-    vi.mocked(uploadProductPhoto).mockRejectedValue(
-      new ApiError(
-        415,
-        "UNSUPPORTED_PHOTO_TYPE",
-        "Send a JPG, PNG or WebP image"
-      )
-    );
-    vi.mocked(shrinkDishPhoto).mockResolvedValue(
-      new Blob(["jpeg"], { type: "image/jpeg" })
-    );
-    renderPage();
-
-    const { user, dialog } = await openDialog("+ New dish");
-    await user.type(within(dialog).getByLabelText("Name"), "Quesadilla");
-    await user.type(within(dialog).getByLabelText("Price (MXN)"), "42");
-    await user.upload(
-      within(dialog).getByLabelText("Upload photo"),
-      new File(["raw"], "quesadilla.jpg", { type: "image/jpeg" })
-    );
-    await user.click(
-      within(dialog).getByRole("button", { name: "Create dish" })
-    );
-
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-      "The dish was saved, but its photo was not"
     );
   });
 

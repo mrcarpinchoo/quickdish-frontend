@@ -3,7 +3,6 @@ import { listCategories, listProducts } from "../api/menu";
 import { AddToCartFlow } from "../components/AddToCartButton";
 import { CartSummary, MobileCartBar } from "../components/CartSummary";
 import { errorMessage } from "../lib/errors";
-import { productImageUrl } from "../lib/menu-images";
 import { formatCents } from "../lib/money";
 import type { Category, Product } from "../types/menu";
 
@@ -197,8 +196,6 @@ function CategoryChip({
 }
 
 function ProductCard({ product }: { product: Product }) {
-  const image = productImageUrl(product);
-
   return (
     <AddToCartFlow
       product={product}
@@ -206,28 +203,12 @@ function ProductCard({ product }: { product: Product }) {
     >
       {start => (
         <article className="flex h-full flex-col gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-stone-100 transition-shadow hover:shadow-md">
-          {image ?
-            <button
-              type="button"
-              onClick={start}
-              disabled={!product.available}
-              aria-label={`Open ${product.name}`}
-              className="block w-full overflow-hidden rounded-xl disabled:cursor-not-allowed"
-            >
-              <img
-                src={image}
-                alt=""
-                loading="lazy"
-                className="aspect-4/3 w-full object-cover transition-transform duration-300 hover:scale-105"
-              />
-            </button>
-          : <div
-              aria-hidden="true"
-              className="flex aspect-4/3 items-center justify-center rounded-xl bg-stone-100 text-4xl text-stone-400"
-            >
-              {product.name.charAt(0)}
-            </div>
-          }
+          <div
+            aria-hidden="true"
+            className="flex aspect-4/3 items-center justify-center rounded-xl bg-stone-100 text-4xl text-stone-400"
+          >
+            {product.name.charAt(0)}
+          </div>
 
           <div className="flex flex-1 flex-col gap-1 px-1">
             <h2 className="leading-snug font-semibold">

@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router";
 import { createOrder } from "../api/orders";
 import { useCart } from "../cart/useCart";
 import { cartErrorMessage } from "../lib/errors";
-import { productImageUrl } from "../lib/menu-images";
 import { formatCents } from "../lib/money";
 import { MAX_QUANTITY, type CartItem } from "../types/cart";
 
@@ -171,26 +170,14 @@ function CartRow({
   onRemove
 }: CartRowProps) {
   const { product, quantity } = item;
-  const image = productImageUrl({
-    id: item.productId,
-    imageUrl: product.imageUrl
-  });
-
   return (
     <li className="flex gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-100">
-      {image ?
-        <img
-          src={image}
-          alt=""
-          className="h-20 w-20 flex-none rounded-xl object-cover"
-        />
-      : <div
-          aria-hidden="true"
-          className="flex h-20 w-20 flex-none items-center justify-center rounded-xl bg-stone-100 text-2xl text-stone-400"
-        >
-          {product.name.charAt(0)}
-        </div>
-      }
+      <div
+        aria-hidden="true"
+        className="flex h-20 w-20 flex-none items-center justify-center rounded-xl bg-stone-100 text-2xl text-stone-400"
+      >
+        {product.name.charAt(0)}
+      </div>
 
       <div className="flex flex-1 flex-col gap-2">
         <div className="flex justify-between gap-3">

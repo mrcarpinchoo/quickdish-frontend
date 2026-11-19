@@ -6,7 +6,6 @@ import { AddToCartButton } from "../components/AddToCartButton";
 import { errorMessage } from "../lib/errors";
 import { formatCents } from "../lib/money";
 import type { Product } from "../types/menu";
-import { productImageUrl } from "../lib/menu-images";
 
 type ProductState =
   | { status: "loading" }
@@ -86,19 +85,12 @@ export function ProductPage() {
         Back to menu
       </Link>
 
-      {product.imageUrl ?
-        <img
-          src={productImageUrl(product) ?? undefined}
-          alt={product.name}
-          className="h-64 w-full rounded-lg object-cover"
-        />
-      : <div
-          aria-hidden="true"
-          className="flex h-64 items-center justify-center rounded-lg bg-stone-100 text-6xl text-stone-400"
-        >
-          {product.name.charAt(0)}
-        </div>
-      }
+      <div
+        aria-hidden="true"
+        className="flex h-64 items-center justify-center rounded-lg bg-stone-100 text-6xl text-stone-400"
+      >
+        {product.name.charAt(0)}
+      </div>
 
       <h1 className="text-2xl font-semibold">{product.name}</h1>
       <p className="text-stone-600">{product.description}</p>
