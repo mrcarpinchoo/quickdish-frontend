@@ -9,5 +9,5 @@ export function redirectTarget(state: unknown): string {
   ) {
     return state.from;
   }
-  return "/";
+  return "/menu";
 }

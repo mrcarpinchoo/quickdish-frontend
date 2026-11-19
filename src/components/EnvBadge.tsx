@@ -5,7 +5,7 @@ type EnvBadgeProps = {
 
 const toneByEnvironment: Record<string, string> = {
   PROD: "bg-red-100 text-red-900 ring-red-300",
-  DEV: "bg-amber-100 text-amber-900 ring-amber-300",
+  DEV: "bg-sun-100 text-sun-900 ring-sun-300",
   LOCAL: "bg-sky-100 text-sky-900 ring-sky-300"
 };
 

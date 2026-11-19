@@ -3,10 +3,9 @@ import { Link, useNavigate } from "react-router";
 import { createOrder } from "../api/orders";
 import { useCart } from "../cart/useCart";
 import { cartErrorMessage } from "../lib/errors";
+import { productImageUrl } from "../lib/menu-images";
 import { formatCents } from "../lib/money";
 import { MAX_QUANTITY, type CartItem } from "../types/cart";
-
-const NOTES_MAX = 500;
 
 export function CartPage() {
   const { cart, refresh, setQuantity, removeItem, clear } = useCart();
@@ -15,7 +14,6 @@ export function CartPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     refresh().catch(caught => setLoadError(cartErrorMessage(caught)));
@@ -40,7 +38,7 @@ export function CartPage() {
     setActionError(null);
     setBusy(true);
     try {
-      const order = await createOrder(notes);
+      const order = await createOrder("");
       await refresh().catch(() => undefined);
       void navigate(`/orders/${order.id}`, { state: { placed: true } });
     } catch (caught) {
@@ -63,12 +61,13 @@ export function CartPage() {
 
   if (cart.items.length === 0) {
     return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Cart</h1>
-        <p className="text-stone-600">Your cart is empty.</p>
+      <section className="mx-auto max-w-md space-y-4 rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-stone-100">
+        <h1 className="text-2xl font-semibold tracking-tight">Your cart</h1>
+        <p className="font-medium text-stone-800">Your cart is empty.</p>
+        <p className="text-stone-600">¡Elige algo rico para empezar!</p>
         <Link
-          to="/"
-          className="text-orange-700 underline"
+          to="/menu"
+          className="inline-block rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white hover:bg-brand-700"
         >
           Browse the menu
         </Link>
@@ -77,16 +76,22 @@ export function CartPage() {
   }
 
   const hasUnavailable = cart.items.some(item => !item.product.available);
+  const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <section className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Cart</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Your cart</h1>
+          <p className="text-sm text-stone-500">
+            {itemCount} {itemCount === 1 ? "item" : "items"}
+          </p>
+        </div>
         <button
           type="button"
           disabled={busy}
           onClick={() => void run(clear)}
-          className="rounded-md px-3 py-1 text-sm text-stone-700 ring-1 ring-stone-300 hover:bg-stone-100 disabled:text-stone-400"
+          className="rounded-xl px-3 py-1.5 text-sm font-medium text-stone-600 ring-1 ring-stone-200 hover:bg-white disabled:text-stone-400"
         >
           Empty cart
         </button>
@@ -95,63 +100,57 @@ export function CartPage() {
       {actionError && (
         <p
           role="alert"
-          className="rounded-md bg-red-50 p-3 text-sm text-red-700"
+          className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
         >
           {actionError}
         </p>
       )}
 
-      <ul className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
-        {cart.items.map(item => (
-          <CartRow
-            key={item.id}
-            item={item}
-            disabled={busy}
-            onIncrease={() =>
-              void run(() => setQuantity(item.id, item.quantity + 1))
-            }
-            onDecrease={() =>
-              void run(() => setQuantity(item.id, item.quantity - 1))
-            }
-            onRemove={() => void run(() => removeItem(item.id))}
-          />
-        ))}
-      </ul>
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <ul className="space-y-3">
+          {cart.items.map(item => (
+            <CartRow
+              key={item.id}
+              item={item}
+              disabled={busy}
+              onIncrease={() =>
+                void run(() => setQuantity(item.id, item.quantity + 1))
+              }
+              onDecrease={() =>
+                void run(() => setQuantity(item.id, item.quantity - 1))
+              }
+              onRemove={() => void run(() => removeItem(item.id))}
+            />
+          ))}
+        </ul>
 
-      <p className="flex justify-between text-lg font-semibold">
-        <span>Total</span>
-        <span>{formatCents(cart.totalCents)}</span>
-      </p>
+        <aside className="h-fit space-y-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100 lg:sticky lg:top-6">
+          <h2 className="text-lg font-semibold">Order summary</h2>
 
-      <form
-        className="space-y-3"
-        onSubmit={event => void placeOrder(event)}
-      >
-        <label className="block text-sm font-medium">
-          Notes for the kitchen (optional)
-          <textarea
-            value={notes}
-            maxLength={NOTES_MAX}
-            onChange={event => setNotes(event.target.value)}
-            rows={3}
-            className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2"
-          />
-        </label>
+          <div className="flex justify-between border-b border-stone-100 pb-4 text-lg font-semibold">
+            <span>Total</span>
+            <span className="text-brand-600">
+              {formatCents(cart.totalCents)}
+            </span>
+          </div>
 
-        {hasUnavailable && (
-          <p className="text-sm text-red-700">
-            Remove the dishes marked as unavailable to place your order.
-          </p>
-        )}
+          {hasUnavailable && (
+            <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+              Remove the dishes marked as unavailable to continue.
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={busy || hasUnavailable}
-          className="w-full rounded-md bg-orange-600 px-4 py-2 font-medium text-white hover:bg-orange-700 disabled:bg-stone-300 disabled:text-stone-600"
-        >
-          {busy ? "Placing order…" : "Place order"}
-        </button>
-      </form>
+          <form onSubmit={event => void placeOrder(event)}>
+            <button
+              type="submit"
+              disabled={busy || hasUnavailable}
+              className="w-full rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white shadow-sm hover:bg-brand-700 disabled:bg-stone-300 disabled:text-stone-600"
+            >
+              {busy ? "Placing order…" : "Place order"}
+            </button>
+          </form>
+        </aside>
+      </div>
     </section>
   );
 }
@@ -172,18 +171,22 @@ function CartRow({
   onRemove
 }: CartRowProps) {
   const { product, quantity } = item;
+  const image = productImageUrl({
+    id: item.productId,
+    imageUrl: product.imageUrl
+  });
 
   return (
-    <li className="flex gap-4 p-4">
-      {product.imageUrl ?
+    <li className="flex gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-100">
+      {image ?
         <img
-          src={product.imageUrl}
+          src={image}
           alt=""
-          className="h-16 w-16 flex-none rounded-md object-cover"
+          className="h-20 w-20 flex-none rounded-xl object-cover"
         />
       : <div
           aria-hidden="true"
-          className="flex h-16 w-16 flex-none items-center justify-center rounded-md bg-stone-100 text-2xl text-stone-400"
+          className="flex h-20 w-20 flex-none items-center justify-center rounded-xl bg-stone-100 text-2xl text-stone-400"
         >
           {product.name.charAt(0)}
         </div>
@@ -199,12 +202,10 @@ function CartRow({
         <p className="text-sm text-stone-600">
           {formatCents(product.priceCents)} each
         </p>
-        {item.notes && (
-          <p className="text-sm text-stone-600">Note: {item.notes}</p>
-        )}
+        {item.notes && <p className="text-sm text-stone-600">{item.notes}</p>}
         {!product.available && (
           <p className="text-sm text-red-700">
-            Not available right now. Remove it to place your order.
+            Not available right now. Remove it to continue.
           </p>
         )}
 
@@ -215,7 +216,7 @@ function CartRow({
               aria-label={`Decrease quantity of ${product.name}`}
               disabled={disabled || quantity <= 1}
               onClick={onDecrease}
-              className="h-8 w-8 rounded-md ring-1 ring-stone-300 hover:bg-stone-100 disabled:text-stone-300"
+              className="h-8 w-8 rounded-lg ring-1 ring-stone-200 hover:bg-stone-100 disabled:text-stone-300"
             >
               −
             </button>
@@ -230,18 +231,19 @@ function CartRow({
               aria-label={`Increase quantity of ${product.name}`}
               disabled={disabled || quantity >= MAX_QUANTITY}
               onClick={onIncrease}
-              className="h-8 w-8 rounded-md ring-1 ring-stone-300 hover:bg-stone-100 disabled:text-stone-300"
+              className="h-8 w-8 rounded-lg ring-1 ring-stone-200 hover:bg-stone-100 disabled:text-stone-300"
             >
               +
             </button>
           </div>
           <button
             type="button"
+            aria-label={`Remove ${product.name}`}
             disabled={disabled}
             onClick={onRemove}
-            className="text-sm text-red-700 underline disabled:text-stone-400"
+            className="text-sm font-medium text-red-600 hover:underline disabled:text-stone-400"
           >
-            Remove {product.name}
+            Remove
           </button>
         </div>
       </div>

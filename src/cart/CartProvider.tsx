@@ -13,17 +13,19 @@ import {
   updateCartItem
 } from "../api/cart";
 import { useAuth } from "../auth/useAuth";
+import { sizeNote } from "../lib/dish-options";
 import type { Cart } from "../types/cart";
 import { CartContext, type CartState } from "./CartContext";
 
-/** Keeps the cart in sync with the API for the signed-in customer. */
+/** Keeps the signed-in customer's cart in sync with the API. */
 export function CartProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState<Cart | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!isAuthenticated) return;
     setCart(await getCart());
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -40,26 +42,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
   }, [isAuthenticated]);
 
-  // Signing out clears the cart in the same render, so nothing leaks to the next user.
+  // Anonymous visitors never see an account cart, even before a sign-out clears state.
   const visibleCart = isAuthenticated ? cart : null;
 
-  const value = useMemo<CartState>(() => {
-    const apply = (next: Cart) => setCart(next);
-    return {
+  const value = useMemo<CartState>(
+    () => ({
       cart: visibleCart,
       itemCount:
         visibleCart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0,
       refresh,
-      addItem: async productId => apply(await addCartItem(productId)),
-      setQuantity: async (itemId, quantity) =>
-        apply(await updateCartItem(itemId, { quantity })),
-      removeItem: async itemId => apply(await removeCartItem(itemId)),
+      addItem: async (productId, choices) => {
+        setCart(
+          await addCartItem(productId, choices.quantity, sizeNote(choices.size))
+        );
+      },
+      setQuantity: async (itemId, quantity) => {
+        setCart(await updateCartItem(itemId, { quantity }));
+      },
+      removeItem: async itemId => {
+        setCart(await removeCartItem(itemId));
+      },
       clear: async () => {
         await clearCart();
         await refresh();
       }
-    };
-  }, [visibleCart, refresh]);
+    }),
+    [visibleCart, refresh]
+  );
 
   return <CartContext value={value}>{children}</CartContext>;
 }

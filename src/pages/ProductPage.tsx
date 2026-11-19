@@ -6,6 +6,7 @@ import { AddToCartButton } from "../components/AddToCartButton";
 import { errorMessage } from "../lib/errors";
 import { formatCents } from "../lib/money";
 import type { Product } from "../types/menu";
+import { productImageUrl } from "../lib/menu-images";
 
 type ProductState =
   | { status: "loading" }
@@ -46,8 +47,8 @@ export function ProductPage() {
         <h1 className="text-2xl font-semibold">Dish not found</h1>
         <p className="text-stone-600">This dish does not exist.</p>
         <Link
-          to="/"
-          className="text-orange-700 underline"
+          to="/menu"
+          className="text-brand-700 underline"
         >
           Back to menu
         </Link>
@@ -65,8 +66,8 @@ export function ProductPage() {
           {state.message}
         </p>
         <Link
-          to="/"
-          className="text-orange-700 underline"
+          to="/menu"
+          className="text-brand-700 underline"
         >
           Back to menu
         </Link>
@@ -79,15 +80,15 @@ export function ProductPage() {
   return (
     <article className="mx-auto max-w-xl space-y-4">
       <Link
-        to="/"
-        className="text-sm text-orange-700 underline"
+        to="/menu"
+        className="text-sm text-brand-700 underline"
       >
         Back to menu
       </Link>
 
       {product.imageUrl ?
         <img
-          src={product.imageUrl}
+          src={productImageUrl(product) ?? undefined}
           alt={product.name}
           className="h-64 w-full rounded-lg object-cover"
         />
@@ -106,10 +107,7 @@ export function ProductPage() {
         <span className="text-xl font-semibold">
           {formatCents(product.priceCents)}
         </span>
-        <AddToCartButton
-          productId={product.id}
-          available={product.available}
-        />
+        <AddToCartButton product={product} />
       </div>
     </article>
   );

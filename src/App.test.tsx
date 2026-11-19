@@ -4,6 +4,16 @@ import App from "./App";
 import { makeToken } from "./test/tokens";
 import { renderWithProviders } from "./test/render";
 
+vi.mock("./api/cart", () => ({
+  getCart: vi
+    .fn()
+    .mockResolvedValue({ id: "cart-1", items: [], totalCents: 0 }),
+  addCartItem: vi.fn(),
+  updateCartItem: vi.fn(),
+  removeCartItem: vi.fn(),
+  clearCart: vi.fn()
+}));
+
 function renderAt(path: string) {
   return renderWithProviders(<App />, { route: path });
 }
@@ -36,7 +46,7 @@ describe("App", () => {
     window.localStorage.clear();
   });
 
-  it("renders the menu at / with the environment badge and API status", async () => {
+  it("opens straight on the menu at / for anonymous visitors", async () => {
     renderAt("/");
 
     expect(
@@ -46,7 +56,29 @@ describe("App", () => {
     expect(await screen.findByText("API online")).toBeInTheDocument();
   });
 
-  it("sends anonymous visitors from /cart to the login page", () => {
+  it("lets anonymous visitors browse the menu at /menu", async () => {
+    renderAt("/menu");
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Menu" })
+    ).toBeInTheDocument();
+    expect(await screen.findByText("API online")).toBeInTheDocument();
+  });
+
+  it("renders the menu at /menu for signed-in customers with the API status", async () => {
+    window.localStorage.setItem(
+      "quickdish.token",
+      makeToken({ role: "CUSTOMER" })
+    );
+    renderAt("/menu");
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Menu" })
+    ).toBeInTheDocument();
+    expect(await screen.findByText("API online")).toBeInTheDocument();
+  });
+
+  it("sends anonymous visitors from /cart to the sign-in page", () => {
     renderAt("/cart");
 
     expect(

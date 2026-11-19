@@ -55,7 +55,7 @@ export function AdminOrdersPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">Orders</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
 
       {orders === null && !loadError && (
         <p className="text-stone-600">Loading orders…</p>
@@ -72,7 +72,7 @@ export function AdminOrdersPage() {
       {actionError && (
         <p
           role="alert"
-          className="rounded-md bg-red-50 p-3 text-sm text-red-700"
+          className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
         >
           {actionError}
         </p>
@@ -145,7 +145,7 @@ function OrderCard({ order, busy, onAdvance }: OrderCardProps) {
   return (
     <article
       aria-label={`Order ${order.id.slice(0, 8)}`}
-      className="space-y-3 rounded-md bg-white p-3 shadow-sm"
+      className="space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-100"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -184,7 +184,7 @@ function OrderCard({ order, busy, onAdvance }: OrderCardProps) {
             type="button"
             disabled={busy}
             onClick={onAdvance}
-            className="rounded-md bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700 disabled:bg-stone-300"
+            className="rounded-xl bg-brand-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:bg-stone-300"
           >
             {busy ? "Advancing…" : "Advance"}
           </button>
